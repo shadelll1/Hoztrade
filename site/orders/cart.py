@@ -54,7 +54,7 @@ class Cart:
         self.session[SESSION_KEY] = self.data
         self.session.modified = True
         self._lines = None
-        for name in ("truck", "delivery_quotes"):
+        for name in ("fleet", "truck", "delivery_quotes"):
             self.__dict__.pop(name, None)
 
     def add(self, product, quantity=1):
@@ -107,14 +107,18 @@ class Cart:
         return sum((line.volume for line in self.lines), Decimal("0"))
 
     @cached_property
+    def fleet(self):
+        return delivery.fleet()
+
+    @cached_property
     def truck(self):
         """(машина, рейсов): наименьшая машина автопарка, которая увезёт корзину; (None, 0) — автопарка нет."""
-        return delivery.pick_truck(delivery.fleet(), self.weight, self.volume)
+        return delivery.pick_truck(self.fleet, self.weight, self.volume)
 
     @cached_property
     def delivery_quotes(self):
         """Расчёт доставки корзины по всем зонам: {id зоны: Quote}."""
-        return delivery.quotes(self.weight, self.volume)
+        return delivery.quotes(self.weight, self.volume, self.fleet)
 
     @property
     def delivery_from(self):

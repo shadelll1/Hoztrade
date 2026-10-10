@@ -86,3 +86,24 @@ def test_404_page(client, settings):
     settings.DEBUG = False
     r = client.get("/product/net-takogo/")
     assert r.status_code == 404 and "Такой страницы нет" in r.content.decode()
+
+
+@pytest.mark.django_db
+def test_tree_cache_invalidation(client, settings):
+    from django.core.cache import cache
+    from rest_framework.test import APIClient
+
+    cache.clear()
+    settings.EXCHANGE_TOKEN = "t"
+    api = APIClient()
+    api.credentials(HTTP_AUTHORIZATION="Token t")
+    root = "11111111-1111-1111-1111-111111111111"
+    api.post("/api/v1/catalog/", {"categories": [{"id": root, "name": "Кровля"}],
+                                  "products": [{"id": "22222222-2222-2222-2222-222222222222", "category_id": root,
+                                                "name": "Ондулин"}]}, format="json")
+    assert [n.name for n in client.get("/").context["catalog_tree"]] == ["Кровля"]
+    Category.objects.filter(ext_id=root).update(name="Кровля и водосток")   # update() без сигналов: дерево из памяти
+    assert [n.name for n in client.get("/").context["catalog_tree"]] == ["Кровля"]
+    category = Category.objects.get(ext_id=root)
+    category.save()                                                          # сохранение — через сигнал
+    assert [n.name for n in client.get("/").context["catalog_tree"]] == ["Кровля и водосток"]

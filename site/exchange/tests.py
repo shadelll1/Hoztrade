@@ -131,7 +131,8 @@ class TestProductImages:
         r = api.generic("PUT", url, png_bytes(), content_type="image/png")
         assert r.status_code == 200, r.content
         product = Product.objects.get()
-        assert product.image.name.endswith(".png") and product.image_1c == "v1"
+        assert product.image.name.endswith(".webp") and product.image_1c == "v1"
+        assert product.thumb.name.endswith("-thumb.webp") and r.json()["thumb"] == product.thumb.url
 
         # Та же версия — фото не просим снова; новая версия — просим.
         assert api.post("/api/v1/catalog/", data, format="json").json()["images_needed"] == []
@@ -142,7 +143,7 @@ class TestProductImages:
         data["products"][0]["image"] = None
         api.post("/api/v1/catalog/", data, format="json")
         product.refresh_from_db()
-        assert not product.image and product.image_1c == ""
+        assert not product.image and not product.thumb and product.image_1c == ""
 
     def test_manual_image_kept_without_field(self, api):
         data, result = self.upload(api, None)
@@ -158,3 +159,15 @@ class TestProductImages:
         r = api.generic("PUT", url, b"not an image", content_type="image/png")
         assert r.status_code == 400
         assert APIClient().generic("PUT", url, png_bytes(), content_type="image/png").status_code == 401
+
+
+def test_big_photo_is_downscaled(tmp_path):
+    from PIL import Image
+
+    from catalog.images import FULL_SIZE, THUMB_SIZE, make_variants
+    buf = io.BytesIO()
+    Image.new("RGB", (4000, 3000), "blue").save(buf, "JPEG", quality=95)
+    full, thumb = make_variants(buf.getvalue())
+    with Image.open(io.BytesIO(full)) as f, Image.open(io.BytesIO(thumb)) as t:
+        assert f.format == "WEBP" and max(f.size) == FULL_SIZE and max(t.size) == THUMB_SIZE
+    assert len(thumb) < len(full) < len(buf.getvalue())

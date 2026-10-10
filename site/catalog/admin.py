@@ -1,6 +1,7 @@
 from django.contrib import admin
 
 from .brands import assign_brands
+from .images import save_product_image
 from .models import Brand, Category, Product
 
 
@@ -40,3 +41,16 @@ class ProductAdmin(admin.ModelAdmin):
                        "price_retail", "price_wholesale", "stock", "category", "updated_at"]
     fields = ["name", "full_name", "sku", "brand", "category", "unit", "price_retail", "price_wholesale", "stock",
               "weight_kg", "volume_m3", "slug", "description", "image", "is_published", "ext_id", "updated_at"]
+
+    def save_model(self, request, obj, form, change):
+        """Фото, загруженное вручную, ужимается и получает миниатюру — как фото из 1С."""
+        super().save_model(request, obj, form, change)
+        if "image" in form.changed_data:
+            if obj.image:
+                obj.image.open("rb")
+                data = obj.image.read()
+                obj.image.close()
+                save_product_image(obj, data)
+            elif obj.thumb:
+                obj.thumb.delete(save=False)
+                obj.save(update_fields=["thumb"])

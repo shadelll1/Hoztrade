@@ -56,21 +56,33 @@ def zones():
     return list(Zone.objects.filter(is_active=True, tariffs__truck__is_active=True).distinct())
 
 
-def quote(zone, weight_kg, volume_m3):
-    """Расчёт доставки в зону. None — в зону не возим (нет тарифов)."""
-    tariffs = {t.truck_id: t.price for t in Tariff.objects.filter(zone=zone, truck__is_active=True)}
-    trucks = [t for t in fleet() if t.pk in tariffs]
-    truck, trips = pick_truck(trucks, Decimal(weight_kg), Decimal(volume_m3))
+def _tariffs():
+    """Тарифы действующих машин: {id зоны: {id машины: цена}} — один запрос."""
+    result = {}
+    for zone_id, truck_id, price in Tariff.objects.filter(truck__is_active=True).values_list("zone_id", "truck_id", "price"):
+        result.setdefault(zone_id, {})[truck_id] = price
+    return result
+
+
+def _quote(zone, prices, trucks, weight_kg, volume_m3):
+    truck, trips = pick_truck([t for t in trucks if t.pk in prices], Decimal(weight_kg), Decimal(volume_m3))
     if truck is None:
         return None
-    return Quote(zone=zone, truck=truck, trips=trips, price=tariffs[truck.pk])
+    return Quote(zone=zone, truck=truck, trips=trips, price=prices[truck.pk])
 
 
-def quotes(weight_kg, volume_m3):
-    """Расчёт для всех зон: {zone_id: Quote}."""
+def quote(zone, weight_kg, volume_m3):
+    """Расчёт доставки в зону. None — в зону не возим (нет тарифов)."""
+    return _quote(zone, _tariffs().get(zone.pk, {}), fleet(), weight_kg, volume_m3)
+
+
+def quotes(weight_kg, volume_m3, trucks=None):
+    """Расчёт для всех зон: {zone_id: Quote}. Три запроса на любое число зон."""
+    trucks = fleet() if trucks is None else trucks
+    tariffs = _tariffs()
     result = {}
     for zone in zones():
-        q = quote(zone, weight_kg, volume_m3)
+        q = _quote(zone, tariffs.get(zone.pk, {}), trucks, weight_kg, volume_m3)
         if q is not None:
             result[zone.pk] = q
     return result

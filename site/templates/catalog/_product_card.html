@@ -1,7 +1,7 @@
 {% load shop %}
 <article class="card">
   <a class="card__img" href="{{ p.get_absolute_url }}" tabindex="-1" aria-hidden="true">
-    {% if p.image %}<img src="{{ p.image.url }}" alt="" loading="lazy">
+    {% if p.image %}<img src="{{ p.list_image.url }}" alt="" loading="lazy" width="240" height="180">
     {% else %}{% root_of p.category as root %}<span class="ph">{% category_icon root.name 56 %}</span>{% endif %}
   </a>
   <div class="card__body">

@@ -3,7 +3,6 @@ import hmac
 import io
 
 from django.conf import settings
-from django.core.files.base import ContentFile
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from PIL import Image, UnidentifiedImageError
@@ -14,6 +13,7 @@ from rest_framework.permissions import BasePermission
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from catalog.images import save_product_image
 from catalog.models import Product
 from delivery.serializers import DeliveryUploadSerializer
 from delivery.services import import_delivery
@@ -103,12 +103,8 @@ class ProductImageView(ExchangeView):
         if fmt not in IMAGE_FORMATS:
             return Response({"errors": f"Формат {fmt} не поддерживается"}, status=status.HTTP_400_BAD_REQUEST)
 
-        if product.image:
-            product.image.delete(save=False)
-        product.image.save(f"{product.slug}.{IMAGE_FORMATS[fmt]}", ContentFile(data), save=False)
-        product.image_1c = version
-        product.save(update_fields=["image", "image_1c", "updated_at"])
-        return Response({"image": product.image.url})
+        save_product_image(product, data, version)
+        return Response({"image": product.image.url, "thumb": product.thumb.url})
 
     def delete(self, request, ext_id):
         product = get_object_or_404(Product, ext_id=ext_id)

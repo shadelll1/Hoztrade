@@ -5,6 +5,8 @@ from django import template
 from django.utils.html import format_html
 from django.utils.safestring import mark_safe
 
+from catalog.tree import root_for
+
 register = template.Library()
 
 NBSP = " "
@@ -110,9 +112,13 @@ def category_icon(name, size=24):
 
 @register.simple_tag
 def root_of(category):
-    """Корневой раздел категории (для иконки товара без фото)."""
-    node = category
-    seen = set()
+    """Корневой раздел категории (для иконки товара без фото) — из кэша дерева, без запросов к базе."""
+    if category is None:
+        return None
+    root = root_for(category.pk)
+    if root is not None:
+        return root
+    node, seen = category, set()   # скрытая группа: дерево её не знает, поднимаемся по родителям
     while node is not None and node.parent_id and node.pk not in seen:
         seen.add(node.pk)
         node = node.parent

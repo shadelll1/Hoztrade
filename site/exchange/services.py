@@ -5,6 +5,7 @@ from django.db import transaction
 
 from catalog.brands import assign_brands
 from catalog.models import Category, Product
+from catalog.tree import invalidate_tree
 
 _PRODUCT_FIELDS = ("sku", "name", "full_name", "unit", "weight_kg", "volume_m3")
 
@@ -33,6 +34,7 @@ def import_catalog(data: dict) -> dict:
     if removed.get("products"):
         result["products"]["unpublished"] += (
             Product.objects.filter(ext_id__in=removed["products"], is_published=True).update(is_published=False))
+    invalidate_tree()  # массовые update() не вызывают сигналов
     # По итогу 1С проверяет, что сайт не потерял данные; не сходится — 1С сделает полную выгрузку.
     result["total"] = {
         "categories": Category.objects.filter(ext_id__isnull=False, is_published=True).count(),
@@ -141,11 +143,13 @@ def _sync_images(items):
 
 
 def remove_product_image(product):
-    if product.image:
-        product.image.delete(save=False)
+    for field in (product.image, product.thumb):
+        if field:
+            field.delete(save=False)
     product.image = ""
+    product.thumb = ""
     product.image_1c = ""
-    product.save(update_fields=["image", "image_1c", "updated_at"])
+    product.save(update_fields=["image", "thumb", "image_1c", "updated_at"])
 
 
 def _import_prices(items):

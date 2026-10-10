@@ -1,4 +1,12 @@
-"""Дерево каталога одним запросом — для меню, главной и боковой панели."""
+"""Дерево каталога одним запросом — для меню, главной и боковой панели.
+
+Дерево нужно на каждой странице (меню, подвал), а меняется только при обмене с 1С и правках в админке. Поэтому
+оно строится один раз и хранится в памяти процесса до смены версии: версия лежит в кэше Django и меняется
+при импорте каталога и сохранении групп и товаров (invalidate_tree).
+"""
+import uuid
+
+from django.core.cache import cache
 from django.db.models import Count, Q
 
 from .models import Category
@@ -50,3 +58,33 @@ def find_node(roots, pk):
             return node
         stack.extend(node.children)
     return None
+
+
+VERSION_KEY = "catalog_tree_version"
+_memo = {}
+
+
+def cached_tree():
+    """Дерево каталога из памяти процесса; перестраивается, когда сменилась версия."""
+    version = cache.get_or_set(VERSION_KEY, lambda: uuid.uuid4().hex, None)
+    if _memo.get("version") != version:
+        roots = build_tree()
+        roots_by_pk = {}
+        for root in roots:
+            stack = [root]
+            while stack:
+                node = stack.pop()
+                roots_by_pk[node.pk] = root
+                stack.extend(node.children)
+        _memo.update(version=version, roots=roots, roots_by_pk=roots_by_pk)
+    return _memo["roots"]
+
+
+def root_for(category_id):
+    """Корневой раздел опубликованной группы по её ID (None — группа скрыта или не найдена)."""
+    cached_tree()
+    return _memo["roots_by_pk"].get(category_id)
+
+
+def invalidate_tree():
+    cache.set(VERSION_KEY, uuid.uuid4().hex, None)

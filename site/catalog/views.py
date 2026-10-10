@@ -10,7 +10,7 @@ from content.models import Post
 from delivery.services import fleet
 
 from .models import Brand, Category, Product
-from .tree import build_tree, find_node
+from .tree import cached_tree, find_node
 
 PER_PAGE = 24
 
@@ -96,7 +96,7 @@ def catalog_root(request):
 
 def category(request, slug):
     current = get_object_or_404(Category, slug=slug, is_published=True)
-    tree = build_tree()
+    tree = cached_tree()
     node = find_node(tree, current.pk)
 
     qs = Product.objects.published().filter(category_id__in=current.descendant_ids()).select_related("category")

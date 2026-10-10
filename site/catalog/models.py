@@ -128,6 +128,8 @@ class Product(models.Model):
 
     description = models.TextField("Описание", blank=True)
     image = models.ImageField("Фото", upload_to="products/", blank=True)
+    # Миниатюра для списков; делается из фото автоматически (catalog/images.py).
+    thumb = models.ImageField("Миниатюра", upload_to="products/thumbs/", blank=True, editable=False)
     # Версия фото из 1С (присылает 1С). Пусто — фото загружено на сайте вручную, обмен его не трогает.
     image_1c = models.CharField("Версия фото из 1С", max_length=100, blank=True, editable=False)
 
@@ -160,6 +162,11 @@ class Product(models.Model):
     @property
     def title(self):
         return self.full_name or self.name
+
+    @property
+    def list_image(self):
+        """Картинка для списков: миниатюра, а если её нет (старое фото) — само фото."""
+        return self.thumb or self.image
 
     @property
     def in_stock(self):

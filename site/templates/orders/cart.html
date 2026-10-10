@@ -15,7 +15,7 @@
         {% with p=line.product %}
         <div class="cart-line">
           <a class="cart-line__img" href="{{ p.get_absolute_url }}" tabindex="-1" aria-hidden="true">
-            {% if p.image %}<img src="{{ p.image.url }}" alt="">{% else %}{% root_of p.category as root %}<span class="ph">{% category_icon root.name 32 %}</span>{% endif %}
+            {% if p.image %}<img src="{{ p.list_image.url }}" alt="" loading="lazy">{% else %}{% root_of p.category as root %}<span class="ph">{% category_icon root.name 32 %}</span>{% endif %}
           </a>
           <div class="cart-line__info">
             <a href="{{ p.get_absolute_url }}">{{ p.title }}</a>
