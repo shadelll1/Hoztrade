@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% load shop %}
+
+{% block title %}Заказ {{ order.number }} | {{ site.name }}{% endblock %}
+{% block head %}<meta name="robots" content="noindex">{% endblock %}
+
+{% block content %}
+<div class="wrap page page--narrow">
+  {% if just_created %}
+    <div class="success">
+      <b>Спасибо! Заказ {{ order.number }} принят</b>
+      <span>Менеджер перезвонит на {{ order.phone }}, подтвердит наличие и доставку. Эта страница — ваша ссылка на статус заказа, сохраните её.</span>
+    </div>
+  {% endif %}
+
+  <h1 class="page__title">Заказ {{ order.number }}</h1>
+
+  <ol class="steps" aria-label="Статус заказа">
+    {% with s=order.status %}
+    <li class="{% if s != 'canceled' %}done{% endif %}">Оформлен</li>
+    <li class="{% if s in 'accepted confirmed shipping done' %}done{% endif %}">Принят в работу</li>
+    <li class="{% if s in 'confirmed shipping done' %}done{% endif %}">Подтверждён</li>
+    <li class="{% if s in 'shipping done' %}done{% endif %}">{% if order.delivery == 'truck' %}В доставке{% else %}Готов к выдаче{% endif %}</li>
+    <li class="{% if s == 'done' %}done{% endif %}">Выполнен</li>
+    {% endwith %}
+  </ol>
+  {% if order.status == 'canceled' %}<div class="alert alert--error">Заказ отменён. Вопросы — по телефону {{ site.phone }}.</div>{% endif %}
+
+  <dl class="specs">
+    <div><dt>Статус</dt><dd>{{ order.get_status_display }}{% if order.status_text %} · {{ order.status_text }}{% endif %}</dd></div>
+    {% if order.ext_number %}<div><dt>Номер в учётной системе</dt><dd>{{ order.ext_number }}</dd></div>{% endif %}
+    <div><dt>Дата</dt><dd>{{ order.created_at|date:"j E Y, H:i" }}</dd></div>
+    <div><dt>Покупатель</dt><dd>{{ order.company|default:order.name }}{% if order.inn %}, ИНН {{ order.inn }}{% endif %}</dd></div>
+    <div><dt>Получение</dt><dd>{% if order.delivery == 'truck' %}Доставка: {{ order.address }}{% if order.truck_t %} (грузотакси {{ order.truck_t|qty }} т){% endif %}{% else %}Самовывоз: {{ order.pickup_store }}{% endif %}</dd></div>
+    {% if order.delivery_date %}<div><dt>Желаемая дата</dt><dd>{{ order.delivery_date|date:"j E Y" }}</dd></div>{% endif %}
+  </dl>
+
+  <section class="section-sm">
+    <h2>Товары</h2>
+    <div class="table-wrap">
+      <table class="table">
+        <thead><tr><th>Товар</th><th class="num">Кол-во</th><th class="num">Цена</th><th class="num">Сумма</th></tr></thead>
+        <tbody>
+          {% for i in order.items.all %}
+            <tr><td>{{ i.name }}{% if i.sku %} <span class="muted">· {{ i.sku }}</span>{% endif %}</td>
+              <td class="num">{% unit_count i.quantity i.unit %}</td><td class="num">{{ i.price|rub }}</td><td class="num">{{ i.amount|rub }}</td></tr>
+          {% endfor %}
+        </tbody>
+        <tfoot><tr><td colspan="3">Итого{% if order.weight_kg %}, вес {{ order.weight_kg|qty }} кг{% endif %}</td><td class="num"><b>{{ order.total|rub }}</b></td></tr></tfoot>
+      </table>
+    </div>
+  </section>
+</div>
+{% endblock %}

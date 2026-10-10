@@ -29,6 +29,8 @@ INSTALLED_APPS = [
     "django.contrib.sitemaps",
     "rest_framework",
     "catalog",
+    "orders",
+    "pages",
     "exchange",
 ]
 
@@ -56,6 +58,7 @@ TEMPLATES = [
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
                 "catalog.context_processors.shop",
+                "orders.context_processors.cart",
             ],
         },
     },
@@ -122,6 +125,10 @@ TRUCK_CAPACITIES_T = [1.5, 3, 5, 10, 20]
 
 EMAIL_BACKEND = env("EMAIL_BACKEND", default="django.core.mail.backends.console.EmailBackend")
 MANAGER_EMAILS = env.list("MANAGER_EMAILS", default=[])
+MANAGERS = [("Менеджер", e) for e in MANAGER_EMAILS]
+DEFAULT_FROM_EMAIL = SERVER_EMAIL = env("DEFAULT_FROM_EMAIL", default="shop@localhost")
+FILE_UPLOAD_MAX_MEMORY_SIZE = 10 * 1024 * 1024
+DATA_UPLOAD_MAX_MEMORY_SIZE = 12 * 1024 * 1024
 
 if not DEBUG:
     SESSION_COOKIE_HTTPONLY = True

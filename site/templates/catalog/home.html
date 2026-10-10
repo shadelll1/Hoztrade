@@ -13,12 +13,12 @@
         <a class="btn btn--ghost btn--lg" href="#delivery">Как работает доставка</a>
       </div>
     </div>
-    <a class="hero__side hero__side--list" href="#order-list">
+    <a class="hero__side hero__side--list" href="{% url 'orders:order_list' %}">
       <b>Заказ по списку</b>
       <span>Пришлите смету или фото листка от строителя — соберём заказ и посчитаем стоимость сами.</span>
       <i class="arrow" aria-hidden="true">→</i>
     </a>
-    <a class="hero__side hero__side--b2b" href="#b2b">
+    <a class="hero__side hero__side--b2b" href="{% url 'pages:b2b' %}">
       <b>Цены для юрлиц</b>
       <span>Оптовые цены, счёт и закрывающие документы для строительных компаний.</span>
       <i class="arrow" aria-hidden="true">→</i>
@@ -100,9 +100,9 @@
       <p>Напишите, что нужно, или приложите смету, спецификацию, даже фото листка, написанного строителем от руки. Менеджер подберёт товары, посчитает стоимость и доставку и перезвонит.</p>
     </div>
     <div class="note">
-      <b>Скоро здесь будет форма</b>
+      <b>Смета, фото или просто текст</b>
       <span>Заявка сразу попадёт менеджеру в 1С как лид.</span>
-      <a class="btn btn--primary" href="tel:{{ site.phone_href }}">Позвонить {{ site.phone }}</a>
+      <a class="btn btn--primary" href="{% url 'orders:order_list' %}">Отправить список</a>
     </div>
   </div>
 </section>
@@ -122,7 +122,7 @@
     <div class="note">
       <b>Счёт и документы — из 1С</b>
       <span>Заказ с сайта сразу попадает в учётную систему, менеджер выставляет счёт без перенабора.</span>
-      <a class="btn btn--ghost" href="mailto:{{ site.email }}">{{ site.email }}</a>
+      <a class="btn btn--ghost" href="{% url 'pages:b2b' %}">Подробнее для юрлиц</a>
     </div>
   </div>
 </section>

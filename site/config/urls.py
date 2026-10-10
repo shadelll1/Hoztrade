@@ -9,6 +9,8 @@ admin.site.site_title = "Хозтрейд"
 urlpatterns = [
     path("admin/", admin.site.urls),
     path("api/v1/", include("exchange.urls")),
+    path("", include("orders.urls")),
+    path("", include("pages.urls")),
     path("", include("catalog.urls")),
 ]
 

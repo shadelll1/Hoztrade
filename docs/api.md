@@ -65,3 +65,58 @@
   "stock": 1
 }
 ```
+
+`categories[].sort` (необязательно) — порядок раздела в меню сайта; если не передан, порядок не меняется.
+
+## Заказы и заявки: забрать → подтвердить
+
+1С забирает новые объекты, создаёт у себя документы и подтверждает получение. Пока подтверждения нет,
+объект отдаётся снова, поэтому сбой посередине ничего не теряет. Повторная загрузка в 1С должна быть
+идемпотентной (поиск по `id` сайта).
+
+### GET /api/v1/orders/new/
+
+До 100 заказов, ещё не подтверждённых 1С, по возрастанию `id`.
+
+```json
+{"orders": [{
+  "id": 1, "number": "Х-000001", "created_at": "2026-10-10T15:25:00+03:00",
+  "customer": {"type": "company", "name": "Сергей Тестов", "phone": "+79001112233", "email": "",
+               "company": "ООО «СтройТест»", "inn": "2123456781"},
+  "delivery": {"method": "truck", "store": "", "address": "Чебоксары, ул. Тестовая, 1",
+               "date": null, "truck_t": 1.5},
+  "comment": "...", "total": 2015.0, "weight_kg": 200.0,
+  "items": [{"product_id": "a9f3…", "sku": "ЦМ-500-50", "name": "Цемент М500 Д0 50 кг", "unit": "мешок",
+             "quantity": 3.0, "price": 520.0, "amount": 1560.0}]
+}]}
+```
+
+`customer.type`: `person` | `company`. `delivery.method`: `pickup` (тогда заполнен `store`) | `truck`.
+`product_id` — ID товара 1С из выгрузки каталога (`null`, если товар был заведён на сайте вручную).
+
+### POST /api/v1/orders/ack/
+
+```json
+{"orders": [{"id": 1, "ext_id": "<uuid ЗаказПокупателя>", "ext_number": "00ХТ-000012"}]}
+```
+Ответ: `{"acknowledged": 1}`.
+
+### POST /api/v1/orders/status/
+
+```json
+{"orders": [{"id": 1, "status": "confirmed", "status_text": "В работе", "ext_number": "00ХТ-000012"}]}
+```
+
+`status`: `new` | `accepted` | `confirmed` | `shipping` | `done` | `canceled` — по нему сайт рисует шаги
+заказа у покупателя. `status_text` — состояние заказа в 1С как есть. Ответ: `{"updated": 1}`.
+
+### GET /api/v1/leads/new/ и POST /api/v1/leads/ack/
+
+```json
+{"leads": [{"id": 1, "kind": "list", "name": "Ольга", "phone": "+79002223344", "email": "",
+            "text": "брус 100×100 — 30 шт…", "created_at": "…",
+            "file": {"name": "smeta.pdf", "url": "http://localhost:8000/api/v1/leads/1/file/"}}]}
+```
+
+`kind`: `callback` (обратный звонок) | `list` (заказ по списку). `file` — `null` или ссылка на файл;
+скачивается тем же токеном. Подтверждение — как у заказов, ключ `leads`.

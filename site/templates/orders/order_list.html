@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+
+{% block title %}Заказ по списку или смете | {{ site.name }}{% endblock %}
+{% block description %}Пришлите смету, спецификацию или фото списка от строителя — соберём заказ, посчитаем стоимость и доставку.{% endblock %}
+
+{% block content %}
+<div class="wrap page page--narrow">
+  <nav class="crumbs" aria-label="Навигация"><a href="{% url 'catalog:home' %}">Главная</a><span>Заказ по списку</span></nav>
+  <h1 class="page__title">Заказ по списку</h1>
+  <p class="lead">Нет времени искать товары на сайте? Напишите, что нужно, или приложите смету, спецификацию, даже фото листка от строителя. Менеджер подберёт товары, посчитает стоимость и доставку и перезвонит.</p>
+
+  <form method="post" enctype="multipart/form-data" class="panel" novalidate>
+    {% csrf_token %}
+    {% if form.non_field_errors %}<div class="alert alert--error">{{ form.non_field_errors|join:" " }}</div>{% endif %}
+    <div class="fields">
+      {% include "orders/_field.html" with field=form.name %}
+      {% include "orders/_field.html" with field=form.phone %}
+      {% include "orders/_field.html" with field=form.email %}
+      {% include "orders/_field.html" with field=form.attachment %}
+      {% include "orders/_field.html" with field=form.text class="field--wide" %}
+    </div>
+    <div class="hp-wrap" aria-hidden="true">{{ form.website }}</div>
+    <label class="check consent{% if form.consent.errors %} field--error{% endif %}">
+      {{ form.consent }}
+      <span>Согласен на <a class="link" href="{% url 'pages:privacy' %}" target="_blank">обработку персональных данных</a></span>
+    </label>
+    {% for e in form.consent.errors %}<span class="field__error">{{ e }}</span>{% endfor %}
+    <button class="btn btn--primary btn--lg" type="submit">Отправить список</button>
+    <p class="muted small">PDF, фото, Word, Excel — до 10 МБ. Заявка сразу попадает менеджеру в 1С.</p>
+  </form>
+</div>
+{% endblock %}

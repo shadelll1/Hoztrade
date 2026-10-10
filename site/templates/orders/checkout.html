@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+{% load shop %}
+
+{% block title %}Оформление заказа | {{ site.name }}{% endblock %}
+{% block head %}<meta name="robots" content="noindex">{% endblock %}
+
+{% block content %}
+<div class="wrap page">
+  <nav class="crumbs" aria-label="Навигация"><a href="{% url 'orders:cart' %}">Корзина</a><span>Оформление</span></nav>
+  <h1 class="page__title">Оформление заказа</h1>
+
+  <form method="post" class="checkout" novalidate data-checkout>
+    {% csrf_token %}
+    <div class="checkout__main">
+      {% if form.non_field_errors %}<div class="alert alert--error">{{ form.non_field_errors|join:" " }}</div>{% endif %}
+
+      <section class="panel">
+        <h2>Покупатель</h2>
+        <div class="segmented">
+          {% for radio in form.customer_type %}<label>{{ radio.tag }}<span>{{ radio.choice_label }}</span></label>{% endfor %}
+        </div>
+        <div class="fields">
+          {% include "orders/_field.html" with field=form.name %}
+          {% include "orders/_field.html" with field=form.phone %}
+          {% include "orders/_field.html" with field=form.email %}
+        </div>
+        <div class="fields" data-show-for="company">
+          {% include "orders/_field.html" with field=form.company %}
+          {% include "orders/_field.html" with field=form.inn %}
+        </div>
+      </section>
+
+      <section class="panel">
+        <h2>Получение</h2>
+        <div class="segmented">
+          {% for radio in form.delivery %}<label>{{ radio.tag }}<span>{{ radio.choice_label }}</span></label>{% endfor %}
+        </div>
+        <div class="fields" data-show-for="pickup">
+          {% include "orders/_field.html" with field=form.store class="field--wide" %}
+        </div>
+        <div class="fields" data-show-for="truck">
+          {% include "orders/_field.html" with field=form.address class="field--wide" %}
+          <p class="hint">По весу заказа ({{ cart.weight|qty }} кг) подойдёт {% if cart.truck %}грузотакси {{ cart.truck }} т{% else %}несколько рейсов 20 т{% endif %}. Стоимость доставки менеджер назовёт при подтверждении.</p>
+        </div>
+        <div class="fields">
+          {% include "orders/_field.html" with field=form.delivery_date %}
+          {% include "orders/_field.html" with field=form.comment class="field--wide" %}
+        </div>
+      </section>
+
+      <div class="hp-wrap" aria-hidden="true">{{ form.website }}</div>
+      <label class="check consent{% if form.consent.errors %} field--error{% endif %}">
+        {{ form.consent }}
+        <span>Согласен на <a class="link" href="{% url 'pages:privacy' %}" target="_blank">обработку персональных данных</a></span>
+      </label>
+      {% for e in form.consent.errors %}<span class="field__error">{{ e }}</span>{% endfor %}
+    </div>
+
+    <aside class="summary">
+      <h2>Ваш заказ</h2>
+      <ul class="summary__lines">
+        {% for line in cart.lines %}<li><span>{{ line.product.name }} × {{ line.quantity }}</span><b>{{ line.amount|rub }}</b></li>{% endfor %}
+      </ul>
+      <div class="summary__row summary__row--total"><span>Итого</span><b>{{ cart.total|rub }}</b></div>
+      <button class="btn btn--primary btn--lg btn--block" type="submit">Подтвердить заказ</button>
+      <p class="muted small">Менеджер перезвонит, подтвердит наличие и время доставки. Оплата при получении или по счёту.</p>
+    </aside>
+  </form>
+</div>
+{% endblock %}

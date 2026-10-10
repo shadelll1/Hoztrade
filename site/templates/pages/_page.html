@@ -1,0 +1,8 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="wrap page page--narrow">
+  <nav class="crumbs" aria-label="Навигация"><a href="{% url 'catalog:home' %}">Главная</a><span>{% block crumb %}{% endblock %}</span></nav>
+  <h1 class="page__title">{% block h1 %}{% endblock %}</h1>
+  <div class="prose prose--page">{% block body %}{% endblock %}</div>
+</div>
+{% endblock %}

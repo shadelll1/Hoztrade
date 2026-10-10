@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+{% load shop %}
+
+{% block title %}Корзина | {{ site.name }}{% endblock %}
+{% block head %}<meta name="robots" content="noindex">{% endblock %}
+
+{% block content %}
+<div class="wrap page">
+  <h1 class="page__title">Корзина</h1>
+
+  {% if cart.lines %}
+  <div class="checkout">
+    <div class="cart">
+      {% for line in cart.lines %}
+        {% with p=line.product %}
+        <div class="cart-line">
+          <a class="cart-line__img" href="{{ p.get_absolute_url }}" tabindex="-1" aria-hidden="true">
+            {% if p.image %}<img src="{{ p.image.url }}" alt="">{% else %}{% root_of p.category as root %}<span class="ph">{% category_icon root.name 32 %}</span>{% endif %}
+          </a>
+          <div class="cart-line__info">
+            <a href="{{ p.get_absolute_url }}">{{ p.title }}</a>
+            <span class="muted">{{ p.price_retail|rub }} за {{ p.unit }}{% if p.weight_kg %} · {{ line.weight|qty }} кг{% endif %}</span>
+            {% if line.over_stock %}<span class="warn">На складе {% unit_count p.stock p.unit %} — остальное привезём под заказ</span>{% endif %}
+          </div>
+          <form class="cart-line__qty" method="post" action="{% url 'orders:cart_update' p.pk %}" data-autosubmit>
+            {% csrf_token %}
+            <div class="stepper stepper--sm" data-stepper>
+              <button type="button" data-step="-1" aria-label="Меньше">−</button>
+              <input type="number" name="quantity" value="{{ line.quantity }}" min="0" step="1" inputmode="numeric" aria-label="Количество">
+              <button type="button" data-step="1" aria-label="Больше">+</button>
+            </div>
+            <noscript><button class="link" type="submit">Пересчитать</button></noscript>
+          </form>
+          <b class="cart-line__sum">{{ line.amount|rub }}</b>
+          <form method="post" action="{% url 'orders:cart_remove' p.pk %}">
+            {% csrf_token %}
+            <button class="icon-btn" type="submit" aria-label="Удалить {{ p.name }}">✕</button>
+          </form>
+        </div>
+        {% endwith %}
+      {% endfor %}
+    </div>
+
+    <aside class="summary">
+      <div class="summary__row"><span>Товары, {{ cart.lines|length }} поз.</span><b>{{ cart.total|rub }}</b></div>
+      <div class="summary__row"><span>Вес</span><span>{{ cart.weight|qty }} кг</span></div>
+      <div class="summary__truck">
+        {% if cart.truck %}
+          <b>Грузотакси {{ cart.truck }} т</b>
+          <span>увезёт весь заказ по весу. Стоимость доставки посчитает менеджер.</span>
+        {% else %}
+          <b>Больше 20 т</b>
+          <span>Привезём в несколько рейсов — менеджер согласует график.</span>
+        {% endif %}
+      </div>
+      <a class="btn btn--primary btn--lg btn--block" href="{% url 'orders:checkout' %}">Оформить заказ</a>
+      <p class="muted small">Оплата при получении или по счёту для юрлиц. Цены и наличие подтвердит менеджер.</p>
+    </aside>
+  </div>
+  {% else %}
+    <div class="empty">
+      <b>В корзине пока пусто</b>
+      <span>Загляните в <a class="link" href="{% url 'catalog:root' %}">каталог</a> или <a class="link" href="{% url 'orders:order_list' %}">пришлите список</a> — соберём заказ за вас.</span>
+    </div>
+  {% endif %}
+</div>
+{% endblock %}

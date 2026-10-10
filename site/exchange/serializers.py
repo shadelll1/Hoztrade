@@ -6,6 +6,7 @@ class CategoryInSerializer(serializers.Serializer):
     id = serializers.UUIDField()
     parent_id = serializers.UUIDField(allow_null=True, required=False)
     name = serializers.CharField(max_length=150)
+    sort = serializers.IntegerField(min_value=0, required=False)
 
 
 class ProductInSerializer(serializers.Serializer):

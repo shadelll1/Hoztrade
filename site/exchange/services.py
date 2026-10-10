@@ -31,15 +31,19 @@ def _import_categories(items, full):
     for item in items:
         category = existing.get(item["id"])
         if category is None:
-            category = Category(ext_id=item["id"], name=item["name"])
+            category = Category(ext_id=item["id"], name=item["name"], sort=item.get("sort", 500))
             category.save()
             existing[item["id"]] = category
             stats["created"] += 1
-        elif category.name != item["name"] or not category.is_published:
+        elif (category.name != item["name"] or not category.is_published
+              or ("sort" in item and category.sort != item["sort"])):
             category.name = item["name"]
             category.is_published = True
             category.save(update_fields=["name", "is_published", "updated_at"])
             stats["updated"] += 1
+        if "sort" in item and category.sort != item["sort"]:
+            category.sort = item["sort"]
+            category.save(update_fields=["sort"])
 
     # Родителей связываем после создания всех групп: группа может прийти раньше родителя.
     for item in items:

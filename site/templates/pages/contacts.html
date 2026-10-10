@@ -1,0 +1,9 @@
+{% extends "pages/_page.html" %}
+{% block title %}Контакты | {{ site.name }}{% endblock %}
+{% block crumb %}Контакты{% endblock %}{% block h1 %}Контакты{% endblock %}
+{% block body %}
+<p class="big"><a href="tel:{{ site.phone_href }}">{{ site.phone }}</a><br><a href="mailto:{{ site.email }}">{{ site.email }}</a></p>
+<h2>Магазины в Чебоксарах</h2>
+<ul>{% for s in site.stores %}<li><b>{{ s.title }}</b> — {{ s.address }}</li>{% endfor %}</ul>
+<p class="muted">Режим работы уточняйте по телефону.</p>
+{% endblock %}

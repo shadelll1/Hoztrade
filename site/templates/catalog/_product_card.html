@@ -12,5 +12,12 @@
     {% if p.in_stock %}<div class="stock stock--yes">В наличии {% unit_count p.stock p.unit %}</div>
     {% else %}<div class="stock stock--no">Под заказ</div>{% endif %}
   </div>
-  <a class="btn btn--primary card__btn" href="{{ p.get_absolute_url }}">{% if p.in_stock %}Купить{% else %}Подробнее{% endif %}</a>
+  {% if p.can_buy %}
+    <form class="card__btn" method="post" action="{% url 'orders:cart_add' p.pk %}" data-add-to-cart>
+      {% csrf_token %}<input type="hidden" name="next" value="{{ request.get_full_path }}">
+      <button class="btn btn--primary btn--block" type="submit">В корзину</button>
+    </form>
+  {% else %}
+    <a class="btn btn--ghost card__btn" href="{{ p.get_absolute_url }}">Подробнее</a>
+  {% endif %}
 </article>
