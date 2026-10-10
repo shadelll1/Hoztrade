@@ -251,6 +251,6 @@ class TestPrivacy:
         done.refresh_from_db()
         lead.refresh_from_db()
         assert done.name == "Обезличено" and done.phone == "" and done.email == "" and done.items.count() == 1
-        assert lead.phone == "" and not lead.attachment and not (tmp_path / "leads").exists() or \
-            not any((tmp_path / "leads").rglob("*.txt"))
+        assert lead.phone == "" and not lead.attachment
+        assert not list(tmp_path.rglob("*.txt"))   # файл сметы удалён с диска
         assert Lead.objects.get(pk=fresh.pk).phone == "+79005556677"
