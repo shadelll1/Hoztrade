@@ -71,6 +71,7 @@
 			<Role>хт_ОсновнаяРоль</Role>
 			<CommonTemplate>хт_ДемоКаталог</CommonTemplate>
 			<CommonTemplate>хт_ДемоКартинки</CommonTemplate>
+			<CommonTemplate>хт_ДемоДоставка</CommonTemplate>
 			<CommonModule>хт_ОбменССайтом</CommonModule>
 			<CommonModule>хт_ОбменССайтомВызовСервера</CommonModule>
 			<CommonModule>хт_ДемоДанные</CommonModule>
@@ -86,9 +87,15 @@
 			<Catalog>СтруктурныеЕдиницы</Catalog>
 			<Catalog>хт_НастройкиОбменаССайтом</Catalog>
 			<Catalog>Лиды</Catalog>
+			<Catalog>ЗоныТарифыДоставки</Catalog>
+			<Catalog>ТранспортныеСредства</Catalog>
+			<Catalog>СлужбыДоставки</Catalog>
 			<Document>ЗаказПокупателя</Document>
+			<Document>МаршрутныйЛист</Document>
 			<InformationRegister>хт_ЖурналОбмена</InformationRegister>
 			<InformationRegister>хт_ОбъектыСайта</InformationRegister>
+			<InformationRegister>хт_ТарифыДоставки</InformationRegister>
+			<InformationRegister>хт_ВерсииНаСайте</InformationRegister>
 		</ChildObjects>
 	</Configuration>
 </MetaDataObject>

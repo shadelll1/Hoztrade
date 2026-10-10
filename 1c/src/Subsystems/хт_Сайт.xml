@@ -27,6 +27,10 @@
 				<xr:Item xsi:type="xr:MDObjectRef">CommonCommand.хт_ЗаполнитьДемоКаталог</xr:Item>
 				<xr:Item xsi:type="xr:MDObjectRef">InformationRegister.хт_ОбъектыСайта</xr:Item>
 				<xr:Item xsi:type="xr:MDObjectRef">CommonCommand.хт_ОбменССайтом</xr:Item>
+				<xr:Item xsi:type="xr:MDObjectRef">InformationRegister.хт_ТарифыДоставки</xr:Item>
+				<xr:Item xsi:type="xr:MDObjectRef">Catalog.ЗоныТарифыДоставки</xr:Item>
+				<xr:Item xsi:type="xr:MDObjectRef">Catalog.ТранспортныеСредства</xr:Item>
+				<xr:Item xsi:type="xr:MDObjectRef">Document.МаршрутныйЛист</xr:Item>
 			</Content>
 		</Properties>
 		<ChildObjects/>

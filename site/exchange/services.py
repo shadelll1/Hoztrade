@@ -13,7 +13,8 @@ def import_catalog(data: dict) -> dict:
     """Upsert групп, товаров, цен и остатков по ID 1С.
 
     data — проверенные данные CatalogUploadSerializer. При full=True всё, чего нет в посылке,
-    снимается с публикации (не удаляется: на товары ссылаются заказы).
+    снимается с публикации (не удаляется: на товары ссылаются заказы). При выгрузке изменений
+    (full=False) с публикации снимается то, что перечислено в removed.
     """
     result = {
         "categories": _import_categories(data["categories"], data["full"]),
@@ -21,6 +22,18 @@ def import_catalog(data: dict) -> dict:
         "prices": _import_prices(data["prices"]),
         "stock": _import_stock(data["stock"]),
         "images_needed": _sync_images(data["products"]),
+    }
+    removed = data.get("removed") or {}
+    if removed.get("categories"):
+        result["categories"]["unpublished"] += (
+            Category.objects.filter(ext_id__in=removed["categories"], is_published=True).update(is_published=False))
+    if removed.get("products"):
+        result["products"]["unpublished"] += (
+            Product.objects.filter(ext_id__in=removed["products"], is_published=True).update(is_published=False))
+    # По итогу 1С проверяет, что сайт не потерял данные; не сходится — 1С сделает полную выгрузку.
+    result["total"] = {
+        "categories": Category.objects.filter(ext_id__isnull=False, is_published=True).count(),
+        "products": Product.objects.filter(ext_id__isnull=False, is_published=True).count(),
     }
     return result
 

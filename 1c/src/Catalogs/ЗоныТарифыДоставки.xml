@@ -1,0 +1,35 @@
+﻿<?xml version="1.0" encoding="UTF-8"?>
+<MetaDataObject xmlns="http://v8.1c.ru/8.3/MDClasses" xmlns:app="http://v8.1c.ru/8.2/managed-application/core" xmlns:cfg="http://v8.1c.ru/8.1/data/enterprise/current-config" xmlns:cmi="http://v8.1c.ru/8.2/managed-application/cmi" xmlns:ent="http://v8.1c.ru/8.1/data/enterprise" xmlns:lf="http://v8.1c.ru/8.2/managed-application/logform" xmlns:pal="http://v8.1c.ru/8.1/data/ui/colors/palette" xmlns:style="http://v8.1c.ru/8.1/data/ui/style" xmlns:sys="http://v8.1c.ru/8.1/data/ui/fonts/system" xmlns:v8="http://v8.1c.ru/8.1/data/core" xmlns:v8ui="http://v8.1c.ru/8.1/data/ui" xmlns:web="http://v8.1c.ru/8.1/data/ui/colors/web" xmlns:win="http://v8.1c.ru/8.1/data/ui/colors/windows" xmlns:xen="http://v8.1c.ru/8.3/xcf/enums" xmlns:xpr="http://v8.1c.ru/8.3/xcf/predef" xmlns:xr="http://v8.1c.ru/8.3/xcf/readable" xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" version="2.21">
+	<Catalog uuid="a130c619-4ac9-4f88-90f3-fad7a8de0abe">
+		<InternalInfo>
+			<xr:GeneratedType name="CatalogObject.ЗоныТарифыДоставки" category="Object">
+				<xr:TypeId>aebaf04f-a310-4652-8b38-8517e7686b04</xr:TypeId>
+				<xr:ValueId>20c368e7-12db-452f-8575-dd563e9a4626</xr:ValueId>
+			</xr:GeneratedType>
+			<xr:GeneratedType name="CatalogRef.ЗоныТарифыДоставки" category="Ref">
+				<xr:TypeId>03527695-5d2e-4e2f-afe0-2da8b382768b</xr:TypeId>
+				<xr:ValueId>19c9387b-8475-4017-bdd3-79c99be717aa</xr:ValueId>
+			</xr:GeneratedType>
+			<xr:GeneratedType name="CatalogSelection.ЗоныТарифыДоставки" category="Selection">
+				<xr:TypeId>5fa49fbb-0411-4ac5-bae6-5c4a9e308cd6</xr:TypeId>
+				<xr:ValueId>43e2f1e3-685b-4128-a7f0-ec14ea34742d</xr:ValueId>
+			</xr:GeneratedType>
+			<xr:GeneratedType name="CatalogList.ЗоныТарифыДоставки" category="List">
+				<xr:TypeId>ef2e5a73-6e7c-47cc-bebf-a394a476c386</xr:TypeId>
+				<xr:ValueId>c14157f2-4310-4033-bcd5-20555b3d56ba</xr:ValueId>
+			</xr:GeneratedType>
+			<xr:GeneratedType name="CatalogManager.ЗоныТарифыДоставки" category="Manager">
+				<xr:TypeId>a1f71988-7e5c-48aa-a963-179e9b7bd644</xr:TypeId>
+				<xr:ValueId>15d3c750-a947-4040-965b-b2e3c7470d3a</xr:ValueId>
+			</xr:GeneratedType>
+		</InternalInfo>
+		<Properties>
+			<ObjectBelonging>Adopted</ObjectBelonging>
+			<Name>ЗоныТарифыДоставки</Name>
+			<Comment/>
+			<ExtendedConfigurationObject>fdf0dbd2-df2a-482c-859f-24035b6e310f</ExtendedConfigurationObject>
+			<Owners><xr:Item xsi:type="xr:MDObjectRef">Catalog.СлужбыДоставки</xr:Item></Owners>
+		</Properties>
+		<ChildObjects/>
+	</Catalog>
+</MetaDataObject>

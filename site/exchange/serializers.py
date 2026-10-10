@@ -33,9 +33,16 @@ class StockInSerializer(serializers.Serializer):
     quantity = serializers.DecimalField(max_digits=14, decimal_places=3)
 
 
+class RemovedSerializer(serializers.Serializer):
+    categories = serializers.ListField(child=serializers.UUIDField(), required=False, default=list)
+    products = serializers.ListField(child=serializers.UUIDField(), required=False, default=list)
+
+
 class CatalogUploadSerializer(serializers.Serializer):
     full = serializers.BooleanField(required=False, default=False)
     categories = CategoryInSerializer(many=True, required=False, default=list)
     products = ProductInSerializer(many=True, required=False, default=list)
     prices = PriceInSerializer(many=True, required=False, default=list)
     stock = StockInSerializer(many=True, required=False, default=list)
+    # Выгрузка изменений: что больше не выгружается из 1С и должно уйти с витрины.
+    removed = RemovedSerializer(required=False, default=dict)

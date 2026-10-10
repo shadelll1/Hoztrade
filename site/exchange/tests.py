@@ -77,6 +77,23 @@ class TestCatalogUpload:
         assert r.json()["products"]["unpublished"] == 1
         assert Product.objects.published().count() == 1
 
+    def test_partial_upload_with_removed(self, api):
+        data = payload()
+        api.post("/api/v1/catalog/", data, format="json")
+        item = data["products"][0]["id"]
+        # Изменилась только цена: частичная посылка без full, остальное не трогается
+        r = api.post("/api/v1/catalog/", {"full": False, "products": data["products"],
+                                          "prices": [{"product_id": item, "retail": 555}]}, format="json")
+        assert r.json()["products"]["updated"] == 0 and r.json()["total"] == {"categories": 2, "products": 1}
+        assert Product.objects.get().price_retail == 555 and Category.objects.filter(is_published=True).count() == 2
+
+        r = api.post("/api/v1/catalog/", {"full": False, "removed": {"products": [item],
+                                                                     "categories": [data["categories"][0]["id"]]}},
+                     format="json")
+        body = r.json()
+        assert body["products"]["unpublished"] == 1 and body["categories"]["unpublished"] == 1
+        assert body["total"] == {"categories": 1, "products": 0}
+
     def test_bad_data_is_400(self, api):
         r = api.post("/api/v1/catalog/", {"products": [{"id": "not-uuid"}]}, format="json")
         assert r.status_code == 400
