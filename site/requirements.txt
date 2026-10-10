@@ -1,16 +1,13 @@
+# Боевые зависимости сайта. Разработка и тесты — requirements-dev.txt.
 asgiref==3.12.1
-colorama==0.4.6
 Django==5.2.18
 django-environ==0.14.0
 djangorestframework==3.18.3
-iniconfig==2.3.1
-packaging==26.3
 pillow==12.3.0
-pluggy==1.6.0
-Pygments==2.21.0
-pytest==9.1.1
-pytest-django==4.14.0
+psycopg[binary]==3.3.6
 sqlparse==0.6.0
 tzdata==2026.5
-waitress==3.0.2
 whitenoise==6.12.0
+# Сервер приложения: waitress — Windows (run-prod.bat), gunicorn — Linux (Docker, systemd)
+waitress==3.0.2
+gunicorn==26.2.0; sys_platform != "win32"
