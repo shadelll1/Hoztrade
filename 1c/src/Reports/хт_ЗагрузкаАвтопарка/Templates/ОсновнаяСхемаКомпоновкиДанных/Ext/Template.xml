@@ -192,11 +192,36 @@
 		ЛЕВОЕ СОЕДИНЕНИЕ (ВЫБРАТЬ
 			Строки.Ссылка КАК Ссылка,
 			КОЛИЧЕСТВО(РАЗЛИЧНЫЕ Строки.Заказ) КАК Заказов,
-			СУММА(ЕСТЬNULL(Строки.Заказ.Вес, 0)) КАК Вес,
-			СУММА(ЕСТЬNULL(Строки.Заказ.Объем, 0)) КАК Объем,
+			СУММА(ВЫБОР
+					КОГДА ЕСТЬNULL(Строки.Заказ.Вес, 0) &gt; 0
+						ТОГДА Строки.Заказ.Вес
+					ИНАЧЕ ЕСТЬNULL(Габариты.Вес, 0)
+				КОНЕЦ) КАК Вес,
+			СУММА(ВЫБОР
+					КОГДА ЕСТЬNULL(Строки.Заказ.Объем, 0) &gt; 0
+						ТОГДА Строки.Заказ.Объем
+					ИНАЧЕ ЕСТЬNULL(Габариты.Объем, 0)
+				КОНЕЦ) КАК Объем,
 			СУММА(ЕСТЬNULL(Строки.Заказ.СтоимостьДоставки, 0)) КАК Доставка
 		ИЗ
 			Документ.МаршрутныйЛист.Заказы КАК Строки
+				ЛЕВОЕ СОЕДИНЕНИЕ (ВЫБРАТЬ
+					Запасы.Ссылка КАК Ссылка,
+					СУММА(Запасы.Количество * ВЫБОР КОГДА Запасы.ЕдиницаИзмерения ССЫЛКА Справочник.ЕдиницыИзмерения ТОГДА Запасы.ЕдиницаИзмерения.Коэффициент ИНАЧЕ 1 КОНЕЦ * Запасы.Номенклатура.Вес) КАК Вес,
+					СУММА(Запасы.Количество * ВЫБОР КОГДА Запасы.ЕдиницаИзмерения ССЫЛКА Справочник.ЕдиницыИзмерения ТОГДА Запасы.ЕдиницаИзмерения.Коэффициент ИНАЧЕ 1 КОНЕЦ * Запасы.Номенклатура.Объем) КАК Объем
+				ИЗ
+					Документ.ЗаказПокупателя.Запасы КАК Запасы
+				ГДЕ
+					Запасы.Ссылка В
+						(ВЫБРАТЬ
+							Листы.Заказ
+						ИЗ
+							Документ.МаршрутныйЛист.Заказы КАК Листы
+						ГДЕ
+							Листы.Ссылка.Дата МЕЖДУ &amp;НачалоПериода И &amp;КонецПериода)
+				СГРУППИРОВАТЬ ПО
+					Запасы.Ссылка) КАК Габариты
+				ПО (Габариты.Ссылка = Строки.Заказ)
 		СГРУППИРОВАТЬ ПО
 			Строки.Ссылка) КАК ЗаказыРейса
 		ПО (ЗаказыРейса.Ссылка = МаршрутныеЛисты.Ссылка)
@@ -312,7 +337,7 @@
 				<v8:content>Загрузка автопарка по машинам</v8:content>
 			</v8:item>
 		</dcsset:presentation>
-		<dcsset:settings xmlns:pal="http://v8.1c.ru/8.1/data/ui/colors/palette" xmlns:style="http://v8.1c.ru/8.1/data/ui/style" xmlns:sys="http://v8.1c.ru/8.1/data/ui/fonts/system" xmlns:web="http://v8.1c.ru/8.1/data/ui/colors/web" xmlns:win="http://v8.1c.ru/8.1/data/ui/colors/windows">
+		<dcsset:settings xmlns:style="http://v8.1c.ru/8.1/data/ui/style" xmlns:sys="http://v8.1c.ru/8.1/data/ui/fonts/system" xmlns:web="http://v8.1c.ru/8.1/data/ui/colors/web" xmlns:win="http://v8.1c.ru/8.1/data/ui/colors/windows">
 			<dcsset:selection>
 				<dcsset:item xsi:type="dcsset:SelectedItemField">
 					<dcsset:field>Рейсов</dcsset:field>
@@ -330,15 +355,6 @@
 					<dcsset:field>Выручка</dcsset:field>
 				</dcsset:item>
 			</dcsset:selection>
-			<dcsset:dataParameters>
-				<dcscor:item xsi:type="dcsset:SettingsParameterValue">
-					<dcscor:parameter>Период</dcscor:parameter>
-					<dcscor:value xsi:type="v8:StandardPeriod">
-						<v8:variant xsi:type="v8:StandardPeriodVariant">ThisMonth</v8:variant>
-					</dcscor:value>
-					<dcsset:userSettingID>de00a9c1-9094-4760-a588-150e946a91f3</dcsset:userSettingID>
-				</dcscor:item>
-			</dcsset:dataParameters>
 			<dcsset:outputParameters>
 				<dcscor:item xsi:type="dcsset:SettingsParameterValue">
 					<dcscor:parameter>Заголовок</dcscor:parameter>
@@ -350,6 +366,15 @@
 					</dcscor:value>
 				</dcscor:item>
 			</dcsset:outputParameters>
+			<dcsset:dataParameters>
+				<dcscor:item xsi:type="dcsset:SettingsParameterValue">
+					<dcscor:parameter>Период</dcscor:parameter>
+					<dcscor:value xsi:type="v8:StandardPeriod">
+						<v8:variant xsi:type="v8:StandardPeriodVariant">ThisMonth</v8:variant>
+					</dcscor:value>
+					<dcsset:userSettingID>cb2cf4cb-9222-4ee7-9738-74d0d471b0ba</dcsset:userSettingID>
+				</dcscor:item>
+			</dcsset:dataParameters>
 			<dcsset:item xsi:type="dcsset:StructureItemGroup">
 				<dcsset:groupItems>
 					<dcsset:item xsi:type="dcsset:GroupItemField">
@@ -394,7 +419,7 @@
 				<v8:content>Рейсы по дням</v8:content>
 			</v8:item>
 		</dcsset:presentation>
-		<dcsset:settings xmlns:pal="http://v8.1c.ru/8.1/data/ui/colors/palette" xmlns:style="http://v8.1c.ru/8.1/data/ui/style" xmlns:sys="http://v8.1c.ru/8.1/data/ui/fonts/system" xmlns:web="http://v8.1c.ru/8.1/data/ui/colors/web" xmlns:win="http://v8.1c.ru/8.1/data/ui/colors/windows">
+		<dcsset:settings xmlns:style="http://v8.1c.ru/8.1/data/ui/style" xmlns:sys="http://v8.1c.ru/8.1/data/ui/fonts/system" xmlns:web="http://v8.1c.ru/8.1/data/ui/colors/web" xmlns:win="http://v8.1c.ru/8.1/data/ui/colors/windows">
 			<dcsset:selection>
 				<dcsset:item xsi:type="dcsset:SelectedItemField">
 					<dcsset:field>Рейсов</dcsset:field>
@@ -415,15 +440,6 @@
 					<dcsset:field>Выручка</dcsset:field>
 				</dcsset:item>
 			</dcsset:selection>
-			<dcsset:dataParameters>
-				<dcscor:item xsi:type="dcsset:SettingsParameterValue">
-					<dcscor:parameter>Период</dcscor:parameter>
-					<dcscor:value xsi:type="v8:StandardPeriod">
-						<v8:variant xsi:type="v8:StandardPeriodVariant">ThisMonth</v8:variant>
-					</dcscor:value>
-					<dcsset:userSettingID>4b952bcd-3f43-4570-8d06-5fdf35e3ade4</dcsset:userSettingID>
-				</dcscor:item>
-			</dcsset:dataParameters>
 			<dcsset:outputParameters>
 				<dcscor:item xsi:type="dcsset:SettingsParameterValue">
 					<dcscor:parameter>Заголовок</dcscor:parameter>
@@ -435,6 +451,15 @@
 					</dcscor:value>
 				</dcscor:item>
 			</dcsset:outputParameters>
+			<dcsset:dataParameters>
+				<dcscor:item xsi:type="dcsset:SettingsParameterValue">
+					<dcscor:parameter>Период</dcscor:parameter>
+					<dcscor:value xsi:type="v8:StandardPeriod">
+						<v8:variant xsi:type="v8:StandardPeriodVariant">ThisMonth</v8:variant>
+					</dcscor:value>
+					<dcsset:userSettingID>67b51b1e-9b2f-4c49-a971-2c345ad163b1</dcsset:userSettingID>
+				</dcscor:item>
+			</dcsset:dataParameters>
 			<dcsset:item xsi:type="dcsset:StructureItemGroup">
 				<dcsset:groupItems>
 					<dcsset:item xsi:type="dcsset:GroupItemField">
