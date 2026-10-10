@@ -1,0 +1,74 @@
+# Боевой стенд сайта «Хозтрейд» на одном Linux-сервере: PostgreSQL + сайт (gunicorn) + Caddy (HTTPS
+# с автоматическим сертификатом Let's Encrypt, раздача фото). Инструкция — docs/deploy.md.
+#   cp .env.example .env   # заполнить
+#   docker compose up -d --build
+name: hoztrade
+
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: hoztrade
+      POSTGRES_USER: hoztrade
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?задайте POSTGRES_PASSWORD в deploy/.env}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U hoztrade -d hoztrade"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  web:
+    build: ../site
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DEBUG: "False"
+      HTTPS: "True"
+      SERVE_MEDIA: "False"
+      SECRET_KEY: ${SECRET_KEY:?задайте SECRET_KEY}
+      EXCHANGE_TOKEN: ${EXCHANGE_TOKEN:?задайте EXCHANGE_TOKEN}
+      DATABASE_URL: postgres://hoztrade:${POSTGRES_PASSWORD}@db:5432/hoztrade
+      ALLOWED_HOSTS: ${SITE_DOMAIN:?задайте SITE_DOMAIN}
+      CSRF_TRUSTED_ORIGINS: https://${SITE_DOMAIN}
+      SITE_URL: https://${SITE_DOMAIN}
+      EMAIL_URL: ${EMAIL_URL:-}
+      DEFAULT_FROM_EMAIL: ${DEFAULT_FROM_EMAIL:-shop@localhost}
+      MANAGER_EMAILS: ${MANAGER_EMAILS:-}
+      ADMIN_EMAILS: ${ADMIN_EMAILS:-}
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
+      TELEGRAM_CHAT_ID: ${TELEGRAM_CHAT_ID:-}
+      LOG_DIR: /app/logs
+      BACKUP_DIR: /app/backups
+    volumes:
+      - media:/app/media
+      - logs:/app/logs
+      - backups:/app/backups
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    depends_on:
+      - web
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      SITE_DOMAIN: ${SITE_DOMAIN}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - media:/srv/media:ro
+      - caddy_data:/data
+      - caddy_config:/config
+
+volumes:
+  pgdata:
+  media:
+  logs:
+  backups:
+  caddy_data:
+  caddy_config:

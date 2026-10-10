@@ -196,12 +196,12 @@ class TestCustomerEmails:
         return Order.objects.latest("pk")
 
     def test_order_created_mail(self, client, demo, mailoutbox, settings):
-        settings.SITE_URL = "https://xn--e1aghgjeep2a.xn--p1ai"
+        settings.SITE_URL = "https://xn--d1abfjwnnv.xn--p1ai"
         order = self.order(client, email="ivan@example.com")
         assert len(mailoutbox) == 1
         mail = mailoutbox[0]
         assert mail.to == ["ivan@example.com"] and order.number in mail.subject
-        assert f"https://xn--e1aghgjeep2a.xn--p1ai{order.get_absolute_url()}" in mail.body
+        assert f"https://xn--d1abfjwnnv.xn--p1ai{order.get_absolute_url()}" in mail.body
         assert "Цемент М500" in mail.body and "доставка 800" in mail.body
 
     def test_no_email_no_mail(self, client, demo, mailoutbox):

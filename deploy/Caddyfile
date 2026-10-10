@@ -1,0 +1,16 @@
+# HTTPS-сертификат Caddy получает сам (Let's Encrypt), домен — SITE_DOMAIN из deploy/.env.
+{$SITE_DOMAIN} {
+	encode zstd gzip
+
+	# Загрузки — напрямую с диска, с кэшем на неделю. Файлы заявок (leads/) — персональные данные:
+	# их отдаёт только API обмена по токену, здесь — 404. Внутри handle_path префикс /media уже снят.
+	handle_path /media/* {
+		@leads path /leads/*
+		respond @leads 404
+		root * /srv/media
+		header Cache-Control "public, max-age=604800"
+		file_server
+	}
+
+	reverse_proxy web:8000
+}

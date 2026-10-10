@@ -97,3 +97,32 @@ def test_backup_sqlite_and_media(tmp_path, settings):
     copies = sorted((tmp_path / "backups").iterdir())
     assert len(copies) == 2
     assert (copies[-1] / "db.sqlite3").stat().st_size > 0 and (copies[-1] / "media.zip").exists()
+
+
+def test_lead_files_not_public(client, settings, tmp_path):
+    """Файлы заявок (сметы) не отдаются по прямой ссылке, фото товаров — отдаются."""
+    from django.urls import clear_url_caches
+    import importlib
+    import config.urls
+
+    settings.MEDIA_ROOT = tmp_path
+    settings.SERVE_MEDIA = True
+    (tmp_path / "leads" / "2026" / "10").mkdir(parents=True)
+    (tmp_path / "leads" / "2026" / "10" / "smeta.pdf").write_bytes(b"%PDF")
+    (tmp_path / "products").mkdir()
+    (tmp_path / "products" / "a.webp").write_bytes(b"img")
+    importlib.reload(config.urls)
+    clear_url_caches()
+    try:
+        assert client.get("/media/leads/2026/10/smeta.pdf").status_code == 404
+        assert client.get("/media/products/a.webp").status_code == 200
+    finally:
+        importlib.reload(config.urls)
+        clear_url_caches()
+
+
+def test_healthz_exempt_from_https_redirect(client, settings, db):
+    settings.SECURE_SSL_REDIRECT = True
+    settings.SECURE_REDIRECT_EXEMPT = [r"^healthz/$"]
+    assert client.get("/healthz/").status_code == 200
+    assert client.get("/delivery/").status_code == 301

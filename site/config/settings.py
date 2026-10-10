@@ -20,6 +20,12 @@ environ.Env.read_env(BASE_DIR / ".env")
 SECRET_KEY = env("SECRET_KEY")
 DEBUG = env("DEBUG")
 ALLOWED_HOSTS = env("ALLOWED_HOSTS")
+# Проверка здоровья внутри контейнера и сервера ходит на 127.0.0.1 по http
+for _local in ("127.0.0.1", "localhost"):
+    if _local not in ALLOWED_HOSTS:
+        ALLOWED_HOSTS.append(_local)
+# За обратным прокси с HTTPS: https://хозтрейд.рф,https://xn--d1abfjwnnv.xn--p1ai
+CSRF_TRUSTED_ORIGINS = env.list("CSRF_TRUSTED_ORIGINS", default=[])
 
 INSTALLED_APPS = [
     "django.contrib.admin",
@@ -165,6 +171,7 @@ if not DEBUG:
 # HTTPS=True — сайт в интернете за TLS (напрямую или за обратным прокси).
 if env("HTTPS"):
     SECURE_SSL_REDIRECT = True
+    SECURE_REDIRECT_EXEMPT = [r"^healthz/$"]
     SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True
