@@ -1,0 +1,15 @@
+# Python / Django
+site/.venv/
+__pycache__/
+*.pyc
+site/.env
+site/db.sqlite3
+site/media/
+site/staticfiles/
+
+# 1С
+*.log
+1c/base-src/
+_auto.out
+_auto.status
+_commit-message.txt
