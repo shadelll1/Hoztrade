@@ -74,8 +74,10 @@
 			<CommonModule>хт_ОбменССайтомВызовСервера</CommonModule>
 			<CommonModule>хт_ДемоДанные</CommonModule>
 			<CommonModule>хт_ЗаказыССайта</CommonModule>
+			<ScheduledJob>хт_ОбменССайтом</ScheduledJob>
 			<CommonCommand>хт_ВыгрузитьКаталогНаСайт</CommonCommand>
 			<CommonCommand>хт_ПроверитьСвязьССайтом</CommonCommand>
+			<CommonCommand>хт_ЗадатьТокенОбмена</CommonCommand>
 			<CommonCommand>хт_ЗаполнитьДемоКаталог</CommonCommand>
 			<CommonCommand>хт_ОбменССайтом</CommonCommand>
 			<Catalog>Номенклатура</Catalog>

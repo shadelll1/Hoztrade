@@ -113,6 +113,13 @@
 		</right>
 	</object>
 	<object>
+		<name>CommonCommand.хт_ЗадатьТокенОбмена</name>
+		<right>
+			<name>View</name>
+			<value>true</value>
+		</right>
+	</object>
+	<object>
 		<name>CommonCommand.хт_ПроверитьСвязьССайтом</name>
 		<right>
 			<name>View</name>
