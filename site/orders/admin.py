@@ -1,6 +1,7 @@
 from django.contrib import admin
 
 from .models import Lead, Order, OrderItem
+from .privacy import anonymize_lead, anonymize_order
 
 
 class OrderItemInline(admin.TabularInline):
@@ -20,6 +21,13 @@ class OrderAdmin(admin.ModelAdmin):
     readonly_fields = ["token", "price_type", "total", "total_1c", "weight_kg", "volume_m3", "truck_t", "truck_name",
                        "trips", "delivery_cost", "ext_id", "ext_number", "exported_at", "status_text", "created_at"]
     inlines = [OrderItemInline]
+    actions = ["anonymize"]
+
+    @admin.action(description="Обезличить (удалить персональные данные по запросу покупателя)")
+    def anonymize(self, request, queryset):
+        for order in queryset:
+            anonymize_order(order)
+        self.message_user(request, f"Обезличено заказов: {queryset.count()}")
 
     @admin.display(description="Номер")
     def number(self, obj):
@@ -32,3 +40,10 @@ class LeadAdmin(admin.ModelAdmin):
     list_filter = ["kind"]
     search_fields = ["name", "phone", "email", "text"]
     readonly_fields = ["ext_id", "ext_number", "exported_at", "created_at"]
+    actions = ["anonymize"]
+
+    @admin.action(description="Обезличить (удалить персональные данные и файл)")
+    def anonymize(self, request, queryset):
+        for lead in queryset:
+            anonymize_lead(lead)
+        self.message_user(request, f"Обезличено заявок: {queryset.count()}")

@@ -227,3 +227,30 @@ class TestCustomerEmails:
         with mock.patch("orders.emails.send_mail", side_effect=OSError("smtp down")):
             order = self.order(client, email="ivan@example.com")
         assert order.pk and "Не удалось отправить письмо" in caplog.text
+
+
+@pytest.mark.django_db
+class TestPrivacy:
+    def test_purge_old_finished(self, client, demo, settings, tmp_path):
+        from datetime import timedelta
+
+        from django.utils import timezone
+        settings.MEDIA_ROOT = tmp_path
+        p = Product.objects.get(sku="ЦМ-500-50")
+        client.post(f"/cart/add/{p.pk}/", {"quantity": 1})
+        client.post("/checkout/", checkout_data(email="a@b.ru"))
+        done = Order.objects.get()
+        Order.objects.filter(pk=done.pk).update(status="done", created_at=timezone.now() - timedelta(days=400))
+        lead = Lead.objects.create(kind="list", name="Пётр", phone="+79001112233", text="смета",
+                                   attachment=SimpleUploadedFile("s.txt", b"x"), exported_at=timezone.now())
+        Lead.objects.filter(pk=lead.pk).update(created_at=timezone.now() - timedelta(days=400))
+        fresh = Lead.objects.create(kind="callback", name="Анна", phone="+79005556677", exported_at=timezone.now())
+        out = io.StringIO()
+        call_command("purge_personal_data", "--days", "365", stdout=out)
+        assert "заказов 1, заявок 1" in out.getvalue()
+        done.refresh_from_db()
+        lead.refresh_from_db()
+        assert done.name == "Обезличено" and done.phone == "" and done.email == "" and done.items.count() == 1
+        assert lead.phone == "" and not lead.attachment and not (tmp_path / "leads").exists() or \
+            not any((tmp_path / "leads").rglob("*.txt"))
+        assert Lead.objects.get(pk=fresh.pk).phone == "+79005556677"
