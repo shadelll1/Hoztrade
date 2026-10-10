@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+
+{% block title %}{{ brand.name }} — купить в Чебоксарах | {{ site.name }}{% endblock %}
+{% block description %}{{ brand.name }}: цены и наличие в магазинах «{{ site.name }}» в Чебоксарах, доставка грузотакси.{% endblock %}
+
+{% block content %}
+<div class="wrap page">
+  <nav class="crumbs" aria-label="Навигация">
+    <a href="{% url 'catalog:home' %}">Главная</a><a href="{% url 'catalog:brands' %}">Бренды</a><span>{{ brand.name }}</span>
+  </nav>
+  <div class="brand-head">
+    {% if brand.logo %}<img src="{{ brand.logo.url }}" alt="{{ brand.name }}">{% endif %}
+    <div>
+      <h1 class="page__title">{{ brand.name }}</h1>
+      {% if brand.description %}<p class="lead">{{ brand.description }}</p>{% endif %}
+      {% if brand.website %}<a class="link" href="{{ brand.website }}" rel="noopener nofollow" target="_blank">Сайт производителя</a>{% endif %}
+    </div>
+  </div>
+  {% include "catalog/_listing.html" %}
+</div>
+{% endblock %}

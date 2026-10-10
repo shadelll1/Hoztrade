@@ -1,0 +1,11 @@
+<article class="post-card post-card--{{ post.kind }}">
+  <a class="post-card__img" href="{{ post.get_absolute_url }}" tabindex="-1" aria-hidden="true">
+    {% if post.image %}<img src="{{ post.image.url }}" alt="" loading="lazy">{% else %}<span class="post-card__ph">{% if post.kind == 'promo' %}%{% elif post.kind == 'advice' %}?{% else %}i{% endif %}</span>{% endif %}
+  </a>
+  <div class="post-card__body">
+    <span class="tag tag--{{ post.kind }}">{{ post.get_kind_display }}</span>
+    <a class="post-card__title" href="{{ post.get_absolute_url }}">{{ post.title }}</a>
+    <p class="post-card__lead">{{ post.lead }}</p>
+    <span class="muted small">{% if post.kind == 'promo' and post.promo_until %}До {{ post.promo_until|date:"j E" }}{% else %}{{ post.published_at|date:"j E Y" }}{% endif %}</span>
+  </div>
+</article>

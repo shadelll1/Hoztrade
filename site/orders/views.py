@@ -1,9 +1,6 @@
-import logging
-
 from django.conf import settings
 from django.contrib import messages
 from django.core.cache import cache
-from django.core.mail import mail_managers
 from django.db import transaction
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
@@ -15,8 +12,7 @@ from catalog.models import Product
 from .cart import Cart
 from .forms import CheckoutForm, LeadForm
 from .models import Lead, Order, OrderItem
-
-log = logging.getLogger(__name__)
+from .notifications import notify
 
 THROTTLE_LIMIT = 5          # отправок форм
 THROTTLE_WINDOW = 10 * 60   # за 10 минут с одного IP
@@ -182,10 +178,4 @@ def callback(request):
 
 
 def _notify(subject, body):
-    """Письмо менеджерам (MANAGER_EMAILS). Сбой почты не должен ронять оформление заказа."""
-    if not settings.MANAGERS:
-        return
-    try:
-        mail_managers(subject, body, fail_silently=False)
-    except Exception:  # noqa: BLE001 — любая ошибка SMTP
-        log.exception("Не удалось отправить уведомление менеджерам")
+    notify(subject, body)

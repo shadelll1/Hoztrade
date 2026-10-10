@@ -16,4 +16,7 @@ urlpatterns = [
     path("returns/", page("returns"), name="returns"),
     path("contacts/", page("contacts"), name="contacts"),
     path("privacy/", page("privacy"), name="privacy"),
+    path("cookies/", page("cookies"), name="cookies"),
+    path("about/", page("about"), name="about"),
+    path("payment/", page("payment"), name="payment"),
 ]

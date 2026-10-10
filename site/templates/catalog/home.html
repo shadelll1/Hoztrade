@@ -54,6 +54,18 @@
   </div>
 </section>
 
+{% if promos %}
+<section class="section section--promo">
+  <div class="wrap">
+    <div class="section__head">
+      <h2>Акции</h2>
+      <a class="link" href="{% url 'content:promos' %}">Все акции</a>
+    </div>
+    <div class="posts">{% for post in promos %}{% include "content/_post_card.html" %}{% endfor %}</div>
+  </div>
+</section>
+{% endif %}
+
 {% if products %}
 <section class="section section--alt">
   <div class="wrap">
@@ -126,4 +138,29 @@
     </div>
   </div>
 </section>
+{% if posts %}
+<section class="section section--alt">
+  <div class="wrap">
+    <div class="section__head">
+      <h2>Новости и советы</h2>
+      <a class="link" href="{% url 'content:news' %}">Все публикации</a>
+    </div>
+    <div class="posts">{% for post in posts %}{% include "content/_post_card.html" %}{% endfor %}</div>
+  </div>
+</section>
+{% endif %}
+
+{% if brands %}
+<section class="section">
+  <div class="wrap">
+    <div class="section__head">
+      <h2>Бренды</h2>
+      <a class="link" href="{% url 'catalog:brands' %}">Все бренды</a>
+    </div>
+    <div class="brands brands--strip">
+      {% for b in brands %}<a class="brand-tile" href="{{ b.get_absolute_url }}">{% if b.logo %}<img src="{{ b.logo.url }}" alt="{{ b.name }}" loading="lazy">{% else %}<b>{{ b.name }}</b>{% endif %}</a>{% endfor %}
+    </div>
+  </div>
+</section>
+{% endif %}
 {% endblock %}

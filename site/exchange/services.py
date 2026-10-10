@@ -3,6 +3,7 @@ from decimal import Decimal
 
 from django.db import transaction
 
+from catalog.brands import assign_brands
 from catalog.models import Category, Product
 
 _PRODUCT_FIELDS = ("sku", "name", "full_name", "unit", "weight_kg", "volume_m3")
@@ -23,6 +24,8 @@ def import_catalog(data: dict) -> dict:
         "stock": _import_stock(data["stock"]),
         "images_needed": _sync_images(data["products"]),
     }
+    # Бренды ведутся на сайте: новым товарам бренд подбирается по названию.
+    assign_brands(Product.objects.filter(ext_id__in=[i["id"] for i in data["products"]], brand__isnull=True))
     removed = data.get("removed") or {}
     if removed.get("categories"):
         result["categories"]["unpublished"] += (

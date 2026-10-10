@@ -7,6 +7,7 @@
   <meta name="description" content="{% block description %}Стройматериалы, сухие смеси, сантехника, ламинат, поликарбонат и печное литьё в Чебоксарах. Доставка грузотакси от 1,5 до 20 тонн.{% endblock %}">
   <link rel="stylesheet" href="{% static 'css/site.css' %}">
   <link rel="stylesheet" href="{% static 'css/orders.css' %}">
+  <link rel="stylesheet" href="{% static 'css/content.css' %}">
   <link rel="icon" href="{% static 'img/favicon.svg' %}" type="image/svg+xml">
   {% block head %}{% endblock %}
 </head>
@@ -20,7 +21,9 @@
       Чебоксары · 3 точки продаж
     </span>
     <nav class="topbar__nav" aria-label="Для покупателей">
+      <a href="{% url 'content:promos' %}">Акции</a>
       <a href="{% url 'pages:delivery' %}">Доставка</a>
+      <a href="{% url 'pages:payment' %}">Оплата</a>
       <a href="{% url 'pages:b2b' %}">Юрлицам</a>
       <a href="{% url 'pages:contacts' %}">Магазины</a>
     </nav>
@@ -134,10 +137,12 @@
       <h3>Покупателям</h3>
       <ul>
         <li><a href="{% url 'pages:delivery' %}">Доставка грузотакси</a></li>
+        <li><a href="{% url 'pages:payment' %}">Оплата</a></li>
         <li><a href="{% url 'orders:order_list' %}">Заказ по списку или смете</a></li>
         <li><a href="{% url 'pages:returns' %}">Возврат и обмен — 14 дней</a></li>
         <li><a href="{% url 'pages:b2b' %}">Корпоративным клиентам</a></li>
-        <li><a href="{% url 'pages:privacy' %}">Обработка персональных данных</a></li>
+        <li><a href="{% url 'content:promos' %}">Акции</a> · <a href="{% url 'content:news' %}">Новости</a> · <a href="{% url 'content:advice' %}">Советы</a></li>
+        <li><a href="{% url 'catalog:brands' %}">Бренды</a> · <a href="{% url 'pages:about' %}">О компании</a></li>
       </ul>
     </section>
     <section id="stores">
@@ -150,8 +155,14 @@
   <div class="wrap footer__bottom">
     <span>© 2018–2026 {{ site.legal_name }}</span>
     <span>Информация на сайте не является публичной офертой. Наличие и цены уточняйте у менеджеров.</span>
+    <span><a href="{% url 'pages:privacy' %}">Персональные данные</a> · <a href="{% url 'pages:cookies' %}">Cookie</a></span>
   </div>
 </footer>
+
+<div class="cookie" role="region" aria-label="Уведомление о cookie" data-cookie hidden>
+  <p>Сайт использует только технические cookie — для корзины и входа в кабинет. <a href="{% url 'pages:cookies' %}">Подробнее</a></p>
+  <button class="btn btn--primary" type="button" data-cookie-ok>Понятно</button>
+</div>
 
 <script src="{% static 'js/site.js' %}" defer></script>
 <script src="{% static 'js/orders.js' %}" defer></script>

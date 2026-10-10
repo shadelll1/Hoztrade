@@ -7,6 +7,8 @@
 {% block head %}
 <script type="application/ld+json">
 {"@context":"https://schema.org","@type":"Product","name":"{{ product.title|escapejs }}","sku":"{{ product.sku|escapejs }}",
+ {% if product.brand %}"brand":{"@type":"Brand","name":"{{ product.brand.name|escapejs }}"},{% endif %}
+ {% if rating.count %}"aggregateRating":{"@type":"AggregateRating","ratingValue":"{{ rating.rating|stringformat:'.1f' }}","reviewCount":"{{ rating.count }}"},{% endif %}
  "offers":{"@type":"Offer","priceCurrency":"RUB","price":"{{ product.price_retail }}",
  "availability":"https://schema.org/{% if product.in_stock %}InStock{% else %}PreOrder{% endif %}"}}
 </script>
@@ -28,7 +30,10 @@
 
     <div class="pdp__info">
       <h1>{{ product.title }}</h1>
-      {% if product.sku %}<p class="muted">Артикул: {{ product.sku }}</p>{% endif %}
+      <p class="muted pdp__meta">
+        {% if product.sku %}<span>Артикул: {{ product.sku }}</span>{% endif %}
+        {% if rating.count %}<a class="rating-link" href="#reviews"><span class="stars" aria-hidden="true">{% stars rating.rating %}</span> {{ rating.rating|stringformat:'.1f' }} · {{ rating.count }} {{ rating.count|plural:"отзыв,отзыва,отзывов" }}</a>{% endif %}
+      </p>
 
       <div class="buybox">
         {% if product.can_buy %}
@@ -66,6 +71,7 @@
         <div><dt>Единица</dt><dd>{{ product.unit }}</dd></div>
         {% if product.weight_kg %}<div><dt>Вес</dt><dd>{{ product.weight_kg|qty }} кг</dd></div>{% endif %}
         {% if product.volume_m3 %}<div><dt>Объём</dt><dd>{{ product.volume_m3|qty }} м³</dd></div>{% endif %}
+        {% if product.brand %}<div><dt>Бренд</dt><dd><a href="{{ product.brand.get_absolute_url }}">{{ product.brand.name }}</a></dd></div>{% endif %}
         {% if product.category %}<div><dt>Раздел</dt><dd><a href="{{ product.category.get_absolute_url }}">{{ product.category.name }}</a></dd></div>{% endif %}
       </dl>
     </div>
@@ -87,6 +93,38 @@
       </div>
     </section>
   {% endif %}
+
+  <section class="section-sm reviews" id="reviews">
+    <h2>Отзывы{% if rating.count %} <span class="muted">{{ rating.count }}</span>{% endif %}</h2>
+    <div class="reviews__grid">
+      <div class="reviews__list">
+        {% for r in reviews %}
+          <article class="review">
+            <header><b>{{ r.name }}</b><span class="stars" aria-label="Оценка {{ r.rating }} из 5">{% stars r.rating %}</span><span class="muted small">{{ r.created_at|date:"j E Y" }}</span></header>
+            <p>{{ r.text|linebreaksbr }}</p>
+            {% if r.reply %}<div class="review__reply"><b>Ответ магазина</b><p>{{ r.reply|linebreaksbr }}</p></div>{% endif %}
+          </article>
+        {% empty %}
+          <p class="muted">Отзывов пока нет. Купили этот товар? Расскажите, как он вам.</p>
+        {% endfor %}
+      </div>
+      <form class="panel review-form" method="post" action="{% url 'content:review' product.slug %}" novalidate>
+        {% csrf_token %}
+        <h3>Оставить отзыв</h3>
+        <fieldset class="rate{% if review_form.rating.errors %} field--error{% endif %}">
+          <legend>Оценка</legend>
+          <div class="rate__stars">{% for radio in review_form.rating %}{{ radio.tag }}<label for="{{ radio.id_for_label }}" title="{{ radio.choice_label }}">★</label>{% endfor %}</div>
+          {% for e in review_form.rating.errors %}<span class="field__error">Поставьте оценку</span>{% endfor %}
+        </fieldset>
+        {% include "orders/_field.html" with field=review_form.name %}
+        {% include "orders/_field.html" with field=review_form.text %}
+        <div class="hp-wrap" aria-hidden="true">{{ review_form.website }}</div>
+        <label class="check consent{% if review_form.consent.errors %} field--error{% endif %}">{{ review_form.consent }} <span>Согласен на <a class="link" href="{% url 'pages:privacy' %}" target="_blank">обработку данных</a> и публикацию отзыва</span></label>
+        <button class="btn btn--primary" type="submit">Отправить отзыв</button>
+        <p class="muted small">Отзыв появится после проверки модератором.</p>
+      </form>
+    </div>
+  </section>
 
   {% if related %}
     <section class="section-sm">

@@ -1,0 +1,17 @@
+{% extends "pages/_page.html" %}
+{% block title %}Файлы cookie | {{ site.name }}{% endblock %}
+{% block head %}<meta name="robots" content="noindex">{% endblock %}
+{% block crumb %}Файлы cookie{% endblock %}{% block h1 %}Файлы cookie{% endblock %}
+{% block body %}
+<div class="alert">Шаблон для демонстрации. Перед запуском текст должен утвердить юрист компании-оператора.</div>
+<p>Сайт использует только технические файлы cookie — без них не работают корзина, вход в личный кабинет и защита форм. Сторонних счётчиков и рекламных cookie на сайте нет.</p>
+<table class="table">
+  <thead><tr><th>Cookie</th><th>Зачем</th><th>Срок</th></tr></thead>
+  <tbody>
+    <tr><td>sessionid</td><td>Корзина и вход в личный кабинет</td><td>2 недели</td></tr>
+    <tr><td>csrftoken</td><td>Защита форм от подделки запросов</td><td>1 год</td></tr>
+  </tbody>
+</table>
+<p>Отметка «Понятно» на плашке о cookie хранится в браузере (localStorage) и на сервер не передаётся. Cookie можно удалить в настройках браузера — тогда корзина очистится.</p>
+<p>Как мы обрабатываем персональные данные — в <a class="link" href="{% url 'pages:privacy' %}">политике обработки персональных данных</a>.</p>
+{% endblock %}

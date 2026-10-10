@@ -131,3 +131,13 @@ def url_with(context, **kwargs):
         params.pop("page", None)
     query = params.urlencode()
     return f"?{query}" if query else "?"
+
+
+@register.simple_tag
+def stars(rating):
+    """★★★★☆ по оценке 1–5 (дробная округляется)."""
+    try:
+        full = max(0, min(5, round(float(rating))))
+    except (TypeError, ValueError):
+        full = 0
+    return "★" * full + "☆" * (5 - full)

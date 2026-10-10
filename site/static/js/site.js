@@ -33,4 +33,16 @@
       });
     });
   });
+
+  // Плашка о cookie: отметка «Понятно» хранится только в браузере
+  var cookie = document.querySelector("[data-cookie]");
+  if (cookie) {
+    var seen = false;
+    try { seen = localStorage.getItem("cookie-ok") === "1"; } catch (e) { /* приватный режим */ }
+    cookie.hidden = seen;
+    cookie.querySelector("[data-cookie-ok]").addEventListener("click", function () {
+      try { localStorage.setItem("cookie-ok", "1"); } catch (e) { /* приватный режим */ }
+      cookie.hidden = true;
+    });
+  }
 })();

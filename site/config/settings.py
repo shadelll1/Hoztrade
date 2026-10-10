@@ -33,6 +33,7 @@ INSTALLED_APPS = [
     "catalog",
     "orders",
     "delivery",
+    "content",
     "pages",
     "exchange",
     "accounts",
@@ -131,6 +132,9 @@ SITE_INFO = {
 EMAIL_BACKEND = env("EMAIL_BACKEND", default="django.core.mail.backends.console.EmailBackend")
 MANAGER_EMAILS = env.list("MANAGER_EMAILS", default=[])
 MANAGERS = [("Менеджер", e) for e in MANAGER_EMAILS]
+# Уведомления в Telegram (orders/notifications.py): оба значения пустые — выключено.
+TELEGRAM_BOT_TOKEN = env("TELEGRAM_BOT_TOKEN", default="")
+TELEGRAM_CHAT_ID = env("TELEGRAM_CHAT_ID", default="")
 DEFAULT_FROM_EMAIL = SERVER_EMAIL = env("DEFAULT_FROM_EMAIL", default="shop@localhost")
 FILE_UPLOAD_MAX_MEMORY_SIZE = 10 * 1024 * 1024
 DATA_UPLOAD_MAX_MEMORY_SIZE = 12 * 1024 * 1024

@@ -2,12 +2,14 @@ import math
 from decimal import Decimal, InvalidOperation
 
 from django.core.paginator import Paginator
-from django.db.models import Case, IntegerField, Value, When
+from django.db.models import Case, Count, IntegerField, Q, Value, When
 from django.shortcuts import get_object_or_404, render
 
+from content.forms import ReviewForm
+from content.models import Post
 from delivery.services import fleet
 
-from .models import Category, Product
+from .models import Brand, Category, Product
 from .tree import build_tree, find_node
 
 PER_PAGE = 24
@@ -65,7 +67,27 @@ def home(request):
     return render(request, "catalog/home.html", {
         "products": in_stock.select_related("category")[:8],
         "trucks": fleet(),
+        "promos": Post.objects.active_promos()[:3],
+        "posts": Post.objects.published().exclude(kind=Post.Kind.PROMO)[:3],
+        "brands": _brands_with_products()[:12],
     })
+
+
+def _brands_with_products():
+    return (Brand.objects.filter(is_published=True)
+            .annotate(count=Count("products", filter=Q(products__is_published=True)))
+            .filter(count__gt=0))
+
+
+def brand_list(request):
+    return render(request, "catalog/brand_list.html", {"brands": _brands_with_products()})
+
+
+def brand(request, slug):
+    item = get_object_or_404(Brand, slug=slug, is_published=True)
+    qs = Product.objects.published().filter(brand=item).select_related("category")
+    qs, filters = _filter_and_sort(request, qs)
+    return render(request, "catalog/brand.html", {"brand": item, "page": _page(request, qs), "filters": filters})
 
 
 def catalog_root(request):
@@ -89,7 +111,7 @@ def category(request, slug):
 
 
 def product(request, slug):
-    item = get_object_or_404(Product.objects.select_related("category__parent"), slug=slug, is_published=True)
+    item = get_object_or_404(Product.objects.select_related("category__parent", "brand"), slug=slug, is_published=True)
     related = (
         _in_stock_first(Product.objects.published().filter(category=item.category).exclude(pk=item.pk))
         .select_related("category")[:4]
@@ -103,11 +125,18 @@ def product(request, slug):
             if truck.volume_m3 > 0 and item.volume_m3 > 0:
                 fits = min(fits, math.floor(truck.volume_m3 / item.volume_m3))
             trucks.append((truck, fits))
+    # Форма отзыва с ошибками возвращается сюда редиректом — введённое берём из сессии.
+    saved = request.session.pop("review_form", None)
+    review_form = ReviewForm(saved["data"]) if saved and saved.get("product") == item.pk else ReviewForm()
+    reviews = item.reviews.approved()
     return render(request, "catalog/product.html", {
         "product": item,
         "breadcrumbs": (item.category.ancestors() + [item.category]) if item.category_id else [],
         "related": related,
         "trucks": trucks,
+        "reviews": reviews,
+        "rating": item.reviews.summary(),
+        "review_form": review_form,
     })
 
 

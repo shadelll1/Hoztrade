@@ -1,7 +1,9 @@
 from django.contrib.sitemaps import Sitemap
 from django.urls import reverse
 
-from .models import Category, Product
+from content.models import Post
+
+from .models import Brand, Category, Product
 
 
 class StaticSitemap(Sitemap):
@@ -9,8 +11,9 @@ class StaticSitemap(Sitemap):
     priority = 0.5
 
     def items(self):
-        return ["catalog:home", "catalog:root", "pages:delivery", "pages:b2b", "pages:returns",
-                "pages:contacts", "orders:order_list"]
+        return ["catalog:home", "catalog:root", "catalog:brands", "content:news", "content:promos", "content:advice",
+                "pages:delivery", "pages:payment", "pages:b2b", "pages:returns", "pages:about", "pages:contacts",
+                "orders:order_list"]
 
     def location(self, item):
         return reverse(item)
@@ -38,4 +41,24 @@ class ProductSitemap(Sitemap):
         return obj.updated_at
 
 
-SITEMAPS = {"static": StaticSitemap, "categories": CategorySitemap, "products": ProductSitemap}
+class BrandSitemap(Sitemap):
+    changefreq = "weekly"
+    priority = 0.6
+
+    def items(self):
+        return Brand.objects.filter(is_published=True).order_by("pk")
+
+
+class PostSitemap(Sitemap):
+    changefreq = "weekly"
+    priority = 0.6
+
+    def items(self):
+        return Post.objects.published().order_by("pk")
+
+    def lastmod(self, obj):
+        return obj.updated_at
+
+
+SITEMAPS = {"static": StaticSitemap, "categories": CategorySitemap, "products": ProductSitemap,
+            "brands": BrandSitemap, "posts": PostSitemap}

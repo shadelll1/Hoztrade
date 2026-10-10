@@ -17,6 +17,7 @@ urlpatterns = [
     path("api/v1/", include("exchange.urls")),
     path("account/", include("accounts.urls")),
     path("", include("orders.urls")),
+    path("", include("content.urls")),
     path("", include("pages.urls")),
     path("", include("catalog.urls")),
 ]

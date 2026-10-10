@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+
+{% block title %}{{ post.title }} | {{ site.name }}{% endblock %}
+{% block description %}{{ post.lead }}{% endblock %}
+{% block head %}
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"Article","headline":"{{ post.title|escapejs }}","description":"{{ post.lead|escapejs }}",
+ "datePublished":"{{ post.published_at|date:'c' }}","dateModified":"{{ post.updated_at|date:'c' }}",
+ "publisher":{"@type":"Organization","name":"{{ site.legal_name|escapejs }}"}}
+</script>
+{% endblock %}
+
+{% block content %}
+<div class="wrap page page--narrow">
+  <nav class="crumbs" aria-label="Навигация">
+    <a href="{% url 'catalog:home' %}">Главная</a>
+    {% if post.kind == 'promo' %}<a href="{% url 'content:promos' %}">Акции</a>{% elif post.kind == 'advice' %}<a href="{% url 'content:advice' %}">Советы</a>{% else %}<a href="{% url 'content:news' %}">Новости</a>{% endif %}
+  </nav>
+  <article class="article">
+    <span class="tag tag--{{ post.kind }}">{{ post.get_kind_display }}</span>
+    <h1>{{ post.title }}</h1>
+    <p class="muted">{{ post.published_at|date:"j E Y" }}{% if post.kind == 'promo' and post.promo_until %} · {% if post.is_expired %}акция завершилась{% else %}действует до {{ post.promo_until|date:"j E Y" }}{% endif %}{% endif %}</p>
+    {% if post.image %}<img class="article__img" src="{{ post.image.url }}" alt="">{% endif %}
+    <p class="article__lead">{{ post.lead }}</p>
+    <div class="prose prose--page">{{ post.body|linebreaks }}</div>
+    <div class="article__cta">
+      <a class="btn btn--primary" href="{% url 'catalog:root' %}">Перейти в каталог</a>
+      <button class="btn btn--ghost" type="button" data-dialog-open="callback">Задать вопрос менеджеру</button>
+    </div>
+  </article>
+  {% if more %}
+    <section class="section-sm">
+      <h2>Ещё {% if post.kind == 'promo' %}акции{% elif post.kind == 'advice' %}советы{% else %}новости{% endif %}</h2>
+      <div class="posts">{% for post in more %}{% include "content/_post_card.html" %}{% endfor %}</div>
+    </section>
+  {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% load shop %}
+
+{% block title %}Бренды и производители | {{ site.name }}{% endblock %}
+{% block description %}Производители стройматериалов в каталоге «{{ site.name }}»: Кнауф, Волма, Церезит, Технониколь и другие. Цены и наличие в Чебоксарах.{% endblock %}
+
+{% block content %}
+<div class="wrap page">
+  <nav class="crumbs" aria-label="Навигация"><a href="{% url 'catalog:home' %}">Главная</a><span>Бренды</span></nav>
+  <h1 class="page__title">Бренды</h1>
+  {% if brands %}
+    <div class="brands">
+      {% for b in brands %}
+        <a class="brand-tile" href="{{ b.get_absolute_url }}">
+          {% if b.logo %}<img src="{{ b.logo.url }}" alt="{{ b.name }}" loading="lazy">{% else %}<b>{{ b.name }}</b>{% endif %}
+          <span class="muted small">{{ b.count }} {{ b.count|plural:"товар,товара,товаров" }}</span>
+        </a>
+      {% endfor %}
+    </div>
+  {% else %}
+    <div class="empty"><b>Бренды скоро появятся</b><span>А пока ищите товары в <a class="link" href="{% url 'catalog:root' %}">каталоге</a>.</span></div>
+  {% endif %}
+</div>
+{% endblock %}

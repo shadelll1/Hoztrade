@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+
+{% block title %}{{ title }} | {{ site.name }}{% endblock %}
+{% block description %}{{ title }} «{{ site.name }}»: скидки на стройматериалы, новости магазинов в Чебоксарах и советы по ремонту и стройке.{% endblock %}
+
+{% block content %}
+<div class="wrap page">
+  <nav class="crumbs" aria-label="Навигация"><a href="{% url 'catalog:home' %}">Главная</a><span>{{ title }}</span></nav>
+  <h1 class="page__title">{{ title }}</h1>
+  <nav class="sorts tabs" aria-label="Разделы">
+    <a href="{% url 'content:news' %}" {% if not kind %}class="is-active" aria-current="page"{% endif %}>Все</a>
+    <a href="{% url 'content:promos' %}" {% if kind == 'promo' %}class="is-active" aria-current="page"{% endif %}>Акции</a>
+    <a href="{% url 'content:advice' %}" {% if kind == 'advice' %}class="is-active" aria-current="page"{% endif %}>Советы</a>
+  </nav>
+  {% if page.object_list %}
+    <div class="posts">{% for post in page.object_list %}{% include "content/_post_card.html" %}{% endfor %}</div>
+    {% if page.has_other_pages %}
+      <nav class="pager" aria-label="Страницы">
+        {% if page.has_previous %}<a href="?page={{ page.previous_page_number }}">← Назад</a>{% endif %}
+        <span>Страница {{ page.number }} из {{ page.paginator.num_pages }}</span>
+        {% if page.has_next %}<a href="?page={{ page.next_page_number }}">Дальше →</a>{% endif %}
+      </nav>
+    {% endif %}
+  {% else %}
+    <div class="empty"><b>Пока ничего нет</b><span>Загляните позже — или <a class="link" href="{% url 'catalog:root' %}">в каталог</a>.</span></div>
+  {% endif %}
+</div>
+{% endblock %}

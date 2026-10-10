@@ -56,6 +56,43 @@ class Category(models.Model):
         return ids
 
 
+class Brand(models.Model):
+    """Производитель. Ведётся на сайте; товары из 1С привязываются к нему по названию (поле «Варианты написания»)."""
+
+    name = models.CharField("Название", max_length=100, unique=True)
+    slug = models.SlugField("Адрес", max_length=120, unique=True)
+    aliases = models.CharField(
+        "Варианты написания", max_length=300, blank=True,
+        help_text="Через запятую, как бренд пишется в названиях товаров: «Кнауф, Knauf»",
+    )
+    description = models.TextField("Описание", blank=True)
+    logo = models.ImageField("Логотип", upload_to="brands/", blank=True)
+    website = models.URLField("Сайт производителя", blank=True)
+    sort = models.PositiveIntegerField("Порядок", default=500)
+    is_published = models.BooleanField("Опубликован", default=True)
+
+    class Meta:
+        verbose_name = "Бренд"
+        verbose_name_plural = "Бренды"
+        ordering = ["sort", "name"]
+
+    def __str__(self):
+        return self.name
+
+    def save(self, *args, **kwargs):
+        if not self.slug:
+            self.slug = make_slug(self.name, Brand)
+        super().save(*args, **kwargs)
+
+    def get_absolute_url(self):
+        return reverse("catalog:brand", args=[self.slug])
+
+    def spellings(self):
+        """Все написания бренда в нижнем регистре: название и варианты."""
+        names = [self.name] + [a for a in self.aliases.split(",")]
+        return [n.strip().lower() for n in names if n.strip()]
+
+
 class ProductQuerySet(models.QuerySet):
     def published(self):
         return self.filter(is_published=True)
@@ -67,6 +104,10 @@ class Product(models.Model):
     ext_id = models.UUIDField("ID в 1С", unique=True, null=True, blank=True)
     category = models.ForeignKey(
         Category, verbose_name="Категория", null=True, blank=True,
+        on_delete=models.SET_NULL, related_name="products",
+    )
+    brand = models.ForeignKey(
+        Brand, verbose_name="Бренд", null=True, blank=True,
         on_delete=models.SET_NULL, related_name="products",
     )
     sku = models.CharField("Артикул", max_length=50, blank=True)
