@@ -114,6 +114,8 @@ REST_FRAMEWORK = {
 
 # Токен, с которым 1С обращается к API обмена
 EXCHANGE_TOKEN = env("EXCHANGE_TOKEN")
+# /healthz/ считает обмен вставшим, если 1С не обращалась дольше (обмен по расписанию — каждые 5 минут)
+EXCHANGE_STALE_MINUTES = env.int("EXCHANGE_STALE_MINUTES", default=30)
 
 # Данные компании для шапки, подвала и контактов
 SITE_INFO = {
@@ -168,9 +170,30 @@ else:
     # Локальный боевой режим (http://localhost) без TLS: проверки HTTPS в check --deploy к нему не относятся.
     SILENCED_SYSTEM_CHECKS = ["security.W004", "security.W008", "security.W012", "security.W016"]
 
+# Журналы: консоль всегда; LOG_DIR — ещё и файл site.log с ротацией (10 МБ × 5). Ошибки 500 в боевом
+# режиме уходят письмом администраторам (ADMIN_EMAILS) — так Django делает по умолчанию.
+ADMINS = [("Администратор", e) for e in env.list("ADMIN_EMAILS", default=[])]
+LOG_DIR = env("LOG_DIR", default="")
 LOGGING = {
     "version": 1,
     "disable_existing_loggers": False,
-    "handlers": {"console": {"class": "logging.StreamHandler"}},
+    "formatters": {"plain": {"format": "{asctime} {levelname} {name}: {message}", "style": "{"}},
+    "filters": {"require_debug_false": {"()": "django.utils.log.RequireDebugFalse"}},
+    "handlers": {
+        "console": {"class": "logging.StreamHandler", "formatter": "plain"},
+        "mail_admins": {"class": "django.utils.log.AdminEmailHandler", "level": "ERROR",
+                        "filters": ["require_debug_false"]},
+    },
     "root": {"handlers": ["console"], "level": "WARNING"},
+    "loggers": {
+        "django.request": {"handlers": ["console", "mail_admins"], "level": "ERROR", "propagate": False},
+    },
 }
+if LOG_DIR:
+    Path(LOG_DIR).mkdir(parents=True, exist_ok=True)
+    LOGGING["handlers"]["file"] = {
+        "class": "logging.handlers.RotatingFileHandler", "formatter": "plain", "encoding": "utf-8",
+        "filename": str(Path(LOG_DIR) / "site.log"), "maxBytes": 10 * 1024 * 1024, "backupCount": 5,
+    }
+    LOGGING["root"]["handlers"].append("file")
+    LOGGING["loggers"]["django.request"]["handlers"].append("file")

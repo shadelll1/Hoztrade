@@ -18,6 +18,7 @@ from catalog.models import Product
 from delivery.serializers import DeliveryUploadSerializer
 from delivery.services import import_delivery
 
+from .models import ExchangeContact
 from .serializers import CatalogUploadSerializer
 from .services import import_catalog, remove_product_image
 
@@ -34,6 +35,8 @@ class ExchangeTokenAuthentication(BaseAuthentication):
         expected = settings.EXCHANGE_TOKEN
         if not expected or not hmac.compare_digest(token.strip(), expected):
             raise AuthenticationFailed("Неверный токен обмена.")
+        ExchangeContact.objects.update_or_create(
+            pk=1, defaults={"last_seen_at": timezone.now(), "last_path": request.path[:200]})
         return (None, EXCHANGE_CLIENT)
 
     def authenticate_header(self, request):

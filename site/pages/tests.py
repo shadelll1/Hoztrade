@@ -35,3 +35,49 @@ class TestSecurityAndSeo:
         assert '<meta property="og:type" content="product">' in body
         page2 = client.get("/search/?q=а&page=2").content.decode()
         assert 'href="http://testserver/search/?page=2"' in page2
+
+
+@pytest.mark.django_db
+class TestHealthz:
+    def test_never_then_ok_then_stale(self, client, settings):
+        from datetime import timedelta
+
+        from django.utils import timezone
+        from rest_framework.test import APIClient
+
+        from exchange.models import ExchangeContact
+
+        assert client.get("/healthz/").json() == {"status": "ok", "db": True,
+                                                  "exchange": {"status": "never", "last_seen_at": None}}
+        settings.EXCHANGE_TOKEN = "t"
+        api = APIClient()
+        api.credentials(HTTP_AUTHORIZATION="Token t")
+        api.get("/api/v1/ping/")
+        assert client.get("/healthz/").json()["exchange"]["status"] == "ok"
+        ExchangeContact.objects.update(last_seen_at=timezone.now() - timedelta(hours=2))
+        assert client.get("/healthz/").json()["exchange"]["status"] == "stale"
+
+    def test_wrong_token_is_not_contact(self, client, settings):
+        from rest_framework.test import APIClient
+        settings.EXCHANGE_TOKEN = "t"
+        api = APIClient()
+        api.credentials(HTTP_AUTHORIZATION="Token wrong")
+        api.get("/api/v1/ping/")
+        assert client.get("/healthz/").json()["exchange"]["status"] == "never"
+
+
+def test_logging_to_file(tmp_path, monkeypatch):
+    """LOG_DIR включает файл с ротацией; конфиг логирования применяется без ошибок."""
+    import importlib
+    import logging.config
+
+    import config.settings as settings_module
+    monkeypatch.setenv("LOG_DIR", str(tmp_path))
+    reloaded = importlib.reload(settings_module)
+    try:
+        logging.config.dictConfig(reloaded.LOGGING)
+        assert reloaded.LOGGING["handlers"]["file"]["filename"].endswith("site.log")
+        assert "mail_admins" in reloaded.LOGGING["loggers"]["django.request"]["handlers"]
+    finally:
+        monkeypatch.delenv("LOG_DIR")
+        logging.config.dictConfig(importlib.reload(settings_module).LOGGING)
