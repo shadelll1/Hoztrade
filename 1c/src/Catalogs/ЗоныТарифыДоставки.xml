@@ -28,7 +28,9 @@
 			<Name>ЗоныТарифыДоставки</Name>
 			<Comment/>
 			<ExtendedConfigurationObject>fdf0dbd2-df2a-482c-859f-24035b6e310f</ExtendedConfigurationObject>
-			<Owners><xr:Item xsi:type="xr:MDObjectRef">Catalog.СлужбыДоставки</xr:Item></Owners>
+			<Owners>
+				<xr:Item xsi:type="xr:MDObjectRef">Catalog.СлужбыДоставки</xr:Item>
+			</Owners>
 		</Properties>
 		<ChildObjects/>
 	</Catalog>

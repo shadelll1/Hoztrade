@@ -28,6 +28,7 @@
 			<Name>МаршрутныйЛист</Name>
 			<Comment/>
 			<ExtendedConfigurationObject>ac2d17bd-db15-4fb9-b0cd-cfccb376494f</ExtendedConfigurationObject>
+			<RegisterRecords/>
 		</Properties>
 		<ChildObjects/>
 	</Document>
