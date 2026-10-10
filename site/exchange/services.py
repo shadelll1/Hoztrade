@@ -62,10 +62,14 @@ def _import_categories(items, full):
             category.sort = item["sort"]
             category.save(update_fields=["sort"])
 
-    # Родителей связываем после создания всех групп: группа может прийти раньше родителя.
+    # Родителей связываем после создания всех групп: группа может прийти раньше родителя. При выгрузке
+    # изменений родитель мог не измениться и не прийти в посылке — тогда он уже есть в базе.
+    parents = dict(existing)
+    missing = {i["parent_id"] for i in items if i.get("parent_id")} - parents.keys()
+    parents.update({c.ext_id: c for c in Category.objects.filter(ext_id__in=missing)})
     for item in items:
         category = existing[item["id"]]
-        parent = existing.get(item.get("parent_id"))
+        parent = parents.get(item.get("parent_id"))
         if category.parent_id != (parent.pk if parent else None):
             category.parent = parent
             category.save(update_fields=["parent", "updated_at"])

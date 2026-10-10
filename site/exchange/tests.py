@@ -94,6 +94,14 @@ class TestCatalogUpload:
         assert body["products"]["unpublished"] == 1 and body["categories"]["unpublished"] == 1
         assert body["total"] == {"categories": 1, "products": 0}
 
+    def test_partial_category_keeps_parent_from_db(self, api):
+        data = payload()
+        api.post("/api/v1/catalog/", data, format="json")
+        child = dict(data["categories"][0], name="Сухие смеси и штукатурки", sort=7)
+        api.post("/api/v1/catalog/", {"full": False, "categories": [child]}, format="json")
+        updated = Category.objects.get(ext_id=child["id"])
+        assert updated.name == "Сухие смеси и штукатурки" and updated.parent.name == "Стройматериалы"
+
     def test_bad_data_is_400(self, api):
         r = api.post("/api/v1/catalog/", {"products": [{"id": "not-uuid"}]}, format="json")
         assert r.status_code == 400
