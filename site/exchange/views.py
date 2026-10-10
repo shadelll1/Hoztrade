@@ -1,8 +1,12 @@
 """API обмена с 1С. Контракт — docs/api.md."""
 import hmac
+import io
 
 from django.conf import settings
+from django.core.files.base import ContentFile
+from django.shortcuts import get_object_or_404
 from django.utils import timezone
+from PIL import Image, UnidentifiedImageError
 from rest_framework import status
 from rest_framework.authentication import BaseAuthentication
 from rest_framework.exceptions import AuthenticationFailed
@@ -10,8 +14,10 @@ from rest_framework.permissions import BasePermission
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from catalog.models import Product
+
 from .serializers import CatalogUploadSerializer
-from .services import import_catalog
+from .services import import_catalog, remove_product_image
 
 EXCHANGE_CLIENT = "1c-exchange"
 
@@ -56,3 +62,43 @@ class CatalogUploadView(ExchangeView):
         if not serializer.is_valid():
             return Response({"errors": serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
         return Response(import_catalog(serializer.validated_data))
+
+
+MAX_IMAGE_BYTES = 5 * 1024 * 1024
+IMAGE_FORMATS = {"JPEG": "jpg", "PNG": "png", "WEBP": "webp", "GIF": "gif"}
+
+
+class ProductImageView(ExchangeView):
+    """Фото товара из 1С: тело запроса — файл картинки, ?version= — версия из выгрузки каталога."""
+
+    parser_classes = []  # тело читаем как есть, без разбора
+
+    def put(self, request, ext_id):
+        product = get_object_or_404(Product, ext_id=ext_id)
+        version = request.query_params.get("version", "")[:100]
+        data = request.body
+        if not version or not data:
+            return Response({"errors": "Нужны тело запроса (файл) и параметр version"},
+                            status=status.HTTP_400_BAD_REQUEST)
+        if len(data) > MAX_IMAGE_BYTES:
+            return Response({"errors": "Файл больше 5 МБ"}, status=status.HTTP_400_BAD_REQUEST)
+        try:
+            with Image.open(io.BytesIO(data)) as img:
+                fmt = img.format
+                img.verify()
+        except (UnidentifiedImageError, OSError, SyntaxError):
+            return Response({"errors": "Это не картинка"}, status=status.HTTP_400_BAD_REQUEST)
+        if fmt not in IMAGE_FORMATS:
+            return Response({"errors": f"Формат {fmt} не поддерживается"}, status=status.HTTP_400_BAD_REQUEST)
+
+        if product.image:
+            product.image.delete(save=False)
+        product.image.save(f"{product.slug}.{IMAGE_FORMATS[fmt]}", ContentFile(data), save=False)
+        product.image_1c = version
+        product.save(update_fields=["image", "image_1c", "updated_at"])
+        return Response({"image": product.image.url})
+
+    def delete(self, request, ext_id):
+        product = get_object_or_404(Product, ext_id=ext_id)
+        remove_product_image(product)
+        return Response(status=status.HTTP_204_NO_CONTENT)

@@ -20,6 +20,7 @@ def import_catalog(data: dict) -> dict:
         "products": _import_products(data["products"], data["full"]),
         "prices": _import_prices(data["prices"]),
         "stock": _import_stock(data["stock"]),
+        "images_needed": _sync_images(data["products"]),
     }
     return result
 
@@ -95,6 +96,36 @@ def _import_products(items, full):
             .update(is_published=False)
         )
     return stats
+
+
+def _sync_images(items):
+    """Сверка версий фото: возвращает ID товаров, фото которых 1С должна прислать (PUT .../image/).
+
+    Фото из 1С, которого больше нет в 1С, удаляется. Фото, загруженное на сайте вручную, не трогаем,
+    пока 1С не пришлёт своё.
+    """
+    items = [i for i in items if "image" in i]
+    products = {p.ext_id: p for p in Product.objects.filter(ext_id__in=[i["id"] for i in items])}
+    needed = []
+    for item in items:
+        product = products.get(item["id"])
+        if product is None:
+            continue
+        version = item["image"] or ""
+        if not version:
+            if product.image_1c:
+                remove_product_image(product)
+        elif version != product.image_1c or not product.image:
+            needed.append(str(item["id"]))
+    return needed
+
+
+def remove_product_image(product):
+    if product.image:
+        product.image.delete(save=False)
+    product.image = ""
+    product.image_1c = ""
+    product.save(update_fields=["image", "image_1c", "updated_at"])
 
 
 def _import_prices(items):

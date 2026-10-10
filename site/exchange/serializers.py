@@ -18,6 +18,8 @@ class ProductInSerializer(serializers.Serializer):
     unit = serializers.CharField(max_length=25, allow_blank=True, required=False, default="")
     weight_kg = serializers.DecimalField(max_digits=12, decimal_places=3, min_value=0, required=False, default=0)
     volume_m3 = serializers.DecimalField(max_digits=12, decimal_places=4, min_value=0, required=False, default=0)
+    # Версия картинки товара в 1С; null — картинки нет; поле не передано — картинку не трогаем.
+    image = serializers.CharField(max_length=100, allow_null=True, required=False)
 
 
 class PriceInSerializer(serializers.Serializer):

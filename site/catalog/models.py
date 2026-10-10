@@ -87,6 +87,8 @@ class Product(models.Model):
 
     description = models.TextField("Описание", blank=True)
     image = models.ImageField("Фото", upload_to="products/", blank=True)
+    # Версия фото из 1С (присылает 1С). Пусто — фото загружено на сайте вручную, обмен его не трогает.
+    image_1c = models.CharField("Версия фото из 1С", max_length=100, blank=True, editable=False)
 
     is_published = models.BooleanField("Опубликован", default=True)
     created_at = models.DateTimeField("Создан", auto_now_add=True)

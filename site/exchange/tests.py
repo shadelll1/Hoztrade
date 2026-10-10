@@ -1,3 +1,4 @@
+import io
 import uuid
 
 import pytest
@@ -79,3 +80,56 @@ class TestCatalogUpload:
     def test_bad_data_is_400(self, api):
         r = api.post("/api/v1/catalog/", {"products": [{"id": "not-uuid"}]}, format="json")
         assert r.status_code == 400
+
+
+def png_bytes(color="red"):
+    from PIL import Image
+    buf = io.BytesIO()
+    Image.new("RGB", (8, 8), color).save(buf, "PNG")
+    return buf.getvalue()
+
+
+@pytest.mark.django_db
+class TestProductImages:
+    def upload(self, api, image):
+        data = payload()
+        data["products"][0]["image"] = image
+        return data, api.post("/api/v1/catalog/", data, format="json").json()
+
+    def test_handshake_upload_and_remove(self, api, settings, tmp_path):
+        settings.MEDIA_ROOT = tmp_path
+        data, result = self.upload(api, "v1")
+        pid = data["products"][0]["id"]
+        assert result["images_needed"] == [pid]
+
+        url = f"/api/v1/products/{pid}/image/?version=v1"
+        r = api.generic("PUT", url, png_bytes(), content_type="image/png")
+        assert r.status_code == 200, r.content
+        product = Product.objects.get()
+        assert product.image.name.endswith(".png") and product.image_1c == "v1"
+
+        # Та же версия — фото не просим снова; новая версия — просим.
+        assert api.post("/api/v1/catalog/", data, format="json").json()["images_needed"] == []
+        data["products"][0]["image"] = "v2"
+        assert api.post("/api/v1/catalog/", data, format="json").json()["images_needed"] == [pid]
+
+        # В 1С картинку убрали — на сайте тоже.
+        data["products"][0]["image"] = None
+        api.post("/api/v1/catalog/", data, format="json")
+        product.refresh_from_db()
+        assert not product.image and product.image_1c == ""
+
+    def test_manual_image_kept_without_field(self, api):
+        data, result = self.upload(api, None)
+        assert result["images_needed"] == []
+        Product.objects.update(image="products/manual.jpg")
+        del data["products"][0]["image"]
+        api.post("/api/v1/catalog/", data, format="json")
+        assert Product.objects.get().image.name == "products/manual.jpg"
+
+    def test_rejects_non_image(self, api):
+        data, _ = self.upload(api, "v1")
+        url = f"/api/v1/products/{data['products'][0]['id']}/image/?version=v1"
+        r = api.generic("PUT", url, b"not an image", content_type="image/png")
+        assert r.status_code == 400
+        assert APIClient().generic("PUT", url, png_bytes(), content_type="image/png").status_code == 401

@@ -70,6 +70,7 @@
 			<Subsystem>хт_Сайт</Subsystem>
 			<Role>хт_ОсновнаяРоль</Role>
 			<CommonTemplate>хт_ДемоКаталог</CommonTemplate>
+			<CommonTemplate>хт_ДемоКартинки</CommonTemplate>
 			<CommonModule>хт_ОбменССайтом</CommonModule>
 			<CommonModule>хт_ОбменССайтомВызовСервера</CommonModule>
 			<CommonModule>хт_ДемоДанные</CommonModule>
