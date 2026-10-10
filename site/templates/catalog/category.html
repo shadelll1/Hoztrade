@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% load shop %}
+
+{% block title %}{{ category.name }} — купить в Чебоксарах | {{ site.name }}{% endblock %}
+{% block description %}{{ category.name }}: цены, наличие на складе в Чебоксарах, доставка грузотакси. {{ site.name }}.{% endblock %}
+
+{% block content %}
+<div class="wrap page">
+  <nav class="crumbs" aria-label="Навигация">
+    <a href="{% url 'catalog:home' %}">Главная</a>
+    <a href="{% url 'catalog:root' %}">Каталог</a>
+    {% for c in breadcrumbs %}<a href="{{ c.get_absolute_url }}">{{ c.name }}</a>{% endfor %}
+  </nav>
+  <h1 class="page__title">{{ category.name }}</h1>
+
+  {% if node.children %}
+    <div class="chips">
+      {% for child in node.children %}
+        <a class="chip" href="{{ child.get_absolute_url }}">{{ child.name }} <span>{{ child.count }}</span></a>
+      {% endfor %}
+    </div>
+  {% endif %}
+
+  {% include "catalog/_listing.html" %}
+</div>
+{% endblock %}

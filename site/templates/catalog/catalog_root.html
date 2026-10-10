@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% load shop %}
+
+{% block title %}Каталог стройматериалов | {{ site.name }}{% endblock %}
+
+{% block content %}
+<div class="wrap page">
+  <nav class="crumbs" aria-label="Навигация"><a href="{% url 'catalog:home' %}">Главная</a><span>Каталог</span></nav>
+  <h1 class="page__title">Каталог</h1>
+  <div class="tree">
+    {% for root in catalog_tree %}
+      <section class="tree__col">
+        <a class="tree__root" href="{{ root.get_absolute_url }}">
+          <span class="cat__icon">{% category_icon root.name 28 %}</span>{{ root.name }}
+        </a>
+        <ul>
+          {% for child in root.children %}
+            <li><a href="{{ child.get_absolute_url }}">{{ child.name }}</a> <span class="muted">{{ child.count }}</span></li>
+          {% endfor %}
+        </ul>
+      </section>
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}

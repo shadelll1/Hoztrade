@@ -1,0 +1,49 @@
+{% load shop %}
+<div class="listing">
+  <details class="filters" {% if filters.active %}open{% endif %} data-filters>
+    <summary>Фильтры{% if filters.active %} · включены{% endif %}</summary>
+    <form method="get" class="filters__form">
+      {% if query %}<input type="hidden" name="q" value="{{ query }}">{% endif %}
+      <input type="hidden" name="sort" value="{{ filters.sort }}">
+      <fieldset>
+        <legend>Цена, ₽</legend>
+        <div class="range">
+          <input type="number" name="price_min" min="0" step="1" placeholder="от" value="{{ filters.price_min|default_if_none:'' }}" aria-label="Цена от">
+          <input type="number" name="price_max" min="0" step="1" placeholder="до" value="{{ filters.price_max|default_if_none:'' }}" aria-label="Цена до">
+        </div>
+      </fieldset>
+      <label class="check"><input type="checkbox" name="in_stock" value="1" {% if filters.in_stock %}checked{% endif %}> Только в наличии</label>
+      <button class="btn btn--primary btn--block" type="submit">Показать</button>
+      {% if filters.active %}<a class="link" href="{% url_with in_stock='' price_min='' price_max='' %}">Сбросить фильтры</a>{% endif %}
+    </form>
+  </details>
+
+  <div class="listing__main">
+    <div class="toolbar">
+      <span class="muted">{{ page.paginator.count }} {{ page.paginator.count|plural:"товар,товара,товаров" }}</span>
+      <nav class="sorts" aria-label="Сортировка">
+        {% for key, label in filters.sorts %}
+          <a href="{% url_with sort=key %}" {% if key == filters.sort %}class="is-active" aria-current="true"{% endif %}>{{ label }}</a>
+        {% endfor %}
+      </nav>
+    </div>
+
+    {% if page.object_list %}
+      <div class="grid grid--3">
+        {% for p in page.object_list %}{% include "catalog/_product_card.html" %}{% endfor %}
+      </div>
+      {% if page.has_other_pages %}
+        <nav class="pager" aria-label="Страницы">
+          {% if page.has_previous %}<a href="{% url_with page=page.previous_page_number %}">← Назад</a>{% endif %}
+          <span>Страница {{ page.number }} из {{ page.paginator.num_pages }}</span>
+          {% if page.has_next %}<a href="{% url_with page=page.next_page_number %}">Дальше →</a>{% endif %}
+        </nav>
+      {% endif %}
+    {% else %}
+      <div class="empty">
+        <b>Ничего не нашлось</b>
+        <span>Измените фильтры или позвоните нам: {{ site.phone }} — найдём нужное под заказ.</span>
+      </div>
+    {% endif %}
+  </div>
+</div>

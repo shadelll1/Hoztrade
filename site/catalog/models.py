@@ -82,6 +82,9 @@ class Product(models.Model):
     )
     stock = models.DecimalField("Остаток", max_digits=14, decimal_places=3, default=Decimal("0"))
 
+    # Нижний регистр названия и артикула: SQLite не умеет регистронезависимый поиск по кириллице.
+    search_text = models.TextField(editable=False, blank=True, db_index=False)
+
     description = models.TextField("Описание", blank=True)
     image = models.ImageField("Фото", upload_to="products/", blank=True)
 
@@ -103,6 +106,9 @@ class Product(models.Model):
     def save(self, *args, **kwargs):
         if not self.slug:
             self.slug = make_slug(self.name, Product, suffix=str(self.ext_id or "")[:8])
+        self.search_text = " ".join([self.name, self.full_name, self.sku]).lower()
+        if kwargs.get("update_fields") is not None:
+            kwargs["update_fields"] = list(kwargs["update_fields"]) + ["search_text"]
         super().save(*args, **kwargs)
 
     def get_absolute_url(self):

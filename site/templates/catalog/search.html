@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+
+{% block title %}Поиск: {{ query }} | {{ site.name }}{% endblock %}
+{% block head %}<meta name="robots" content="noindex">{% endblock %}
+
+{% block content %}
+<div class="wrap page">
+  <nav class="crumbs" aria-label="Навигация"><a href="{% url 'catalog:home' %}">Главная</a><span>Поиск</span></nav>
+  <h1 class="page__title">{% if query %}Поиск: «{{ query }}»{% else %}Поиск по каталогу{% endif %}</h1>
+  {% include "catalog/_listing.html" %}
+</div>
+{% endblock %}

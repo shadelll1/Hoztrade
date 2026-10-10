@@ -1,0 +1,129 @@
+{% extends "base.html" %}
+{% load shop %}
+
+{% block content %}
+<section class="hero">
+  <div class="wrap hero__grid">
+    <div class="hero__main">
+      <p class="eyebrow">Стройматериалы в Чебоксарах</p>
+      <h1>Всё для стройки и ремонта — с доставкой своим грузотакси</h1>
+      <p class="hero__lead">Цемент, блоки, кровля, сухие смеси, сантехника и ламинат. Привезём машиной нужного размера: от 1,5 до 20 тонн, без посредников.</p>
+      <div class="hero__cta">
+        <a class="btn btn--primary btn--lg" href="{% url 'catalog:root' %}">Перейти в каталог</a>
+        <a class="btn btn--ghost btn--lg" href="#delivery">Как работает доставка</a>
+      </div>
+    </div>
+    <a class="hero__side hero__side--list" href="#order-list">
+      <b>Заказ по списку</b>
+      <span>Пришлите смету или фото листка от строителя — соберём заказ и посчитаем стоимость сами.</span>
+      <i class="arrow" aria-hidden="true">→</i>
+    </a>
+    <a class="hero__side hero__side--b2b" href="#b2b">
+      <b>Цены для юрлиц</b>
+      <span>Оптовые цены, счёт и закрывающие документы для строительных компаний.</span>
+      <i class="arrow" aria-hidden="true">→</i>
+    </a>
+  </div>
+</section>
+
+<section class="perks" aria-label="Преимущества">
+  <div class="wrap perks__grid">
+    <div class="perk"><b>10&nbsp;000+</b><span>видов товаров в&nbsp;наличии</span></div>
+    <div class="perk"><b>Лучшая цена</b><span>нашли дешевле — вернём разницу</span></div>
+    <div class="perk"><b>1,5–20 т</b><span>собственное грузотакси</span></div>
+    <div class="perk"><b>14 дней</b><span>на возврат и обмен товара</span></div>
+  </div>
+</section>
+
+<section class="section">
+  <div class="wrap">
+    <div class="section__head">
+      <h2>Каталог</h2>
+      <a class="link" href="{% url 'catalog:root' %}">Все разделы</a>
+    </div>
+    <div class="cats">
+      {% for root in catalog_tree %}
+        <a class="cat" href="{{ root.get_absolute_url }}">
+          <span class="cat__icon">{% category_icon root.name 32 %}</span>
+          <span class="cat__name">{{ root.name }}</span>
+          <span class="cat__subs">{% for child in root.children|slice:":3" %}{{ child.name }}{% if not forloop.last %} · {% endif %}{% endfor %}</span>
+          <span class="cat__count">{{ root.count }} {{ root.count|plural:"товар,товара,товаров" }}</span>
+        </a>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+
+{% if products %}
+<section class="section section--alt">
+  <div class="wrap">
+    <div class="section__head">
+      <h2>Есть на складе</h2>
+      <a class="link" href="{% url 'catalog:root' %}">Весь каталог</a>
+    </div>
+    <div class="grid">
+      {% for p in products %}{% include "catalog/_product_card.html" %}{% endfor %}
+    </div>
+  </div>
+</section>
+{% endif %}
+
+<section class="section" id="delivery">
+  <div class="wrap delivery">
+    <div>
+      <p class="eyebrow">Доставка</p>
+      <h2>Своё грузотакси — машина под размер заказа</h2>
+      <p>Не нужно искать перевозчика: собственный автопарк от 1,5 до 20 тонн. Сайт сам посчитает вес корзины и подскажет, какая машина нужна, а менеджер согласует время.</p>
+      <ul class="checks">
+        <li>Собственный автопарк — нет срывов по вине третьих лиц</li>
+        <li>Машина под объём заказа: от 1,5 до 20 тонн</li>
+        <li>Сайт подсказывает нужную машину по весу корзины</li>
+      </ul>
+    </div>
+    <div class="fleet">
+      {% for t in trucks %}
+        <div class="truck">
+          <svg viewBox="0 0 64 32" aria-hidden="true"><rect x="2" y="6" width="36" height="18" rx="2"/><path d="M38 12h12l8 7v5H38z"/><circle cx="14" cy="26" r="4"/><circle cx="48" cy="26" r="4"/></svg>
+          <b>{{ t }} т</b>
+          <span>{% if t <= 1.5 %}до 30 мешков{% elif t <= 3 %}поддон блоков{% elif t <= 5 %}кровля на дом{% elif t <= 10 %}коробка дома{% else %}крупный объект{% endif %}</span>
+        </div>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+
+<section class="section section--alt" id="order-list">
+  <div class="wrap split">
+    <div>
+      <p class="eyebrow">Нет времени искать</p>
+      <h2>Закажите по списку — мы всё соберём</h2>
+      <p>Напишите, что нужно, или приложите смету, спецификацию, даже фото листка, написанного строителем от руки. Менеджер подберёт товары, посчитает стоимость и доставку и перезвонит.</p>
+    </div>
+    <div class="note">
+      <b>Скоро здесь будет форма</b>
+      <span>Заявка сразу попадёт менеджеру в 1С как лид.</span>
+      <a class="btn btn--primary" href="tel:{{ site.phone_href }}">Позвонить {{ site.phone }}</a>
+    </div>
+  </div>
+</section>
+
+<section class="section" id="b2b">
+  <div class="wrap split">
+    <div>
+      <p class="eyebrow">Корпоративным клиентам</p>
+      <h2>Строительным компаниям и бригадам</h2>
+      <p>Мы крупный клиент для производителей и делим с вами наши скидки. Оптовые цены видны в каталоге сразу после подтверждения учётной записи компании.</p>
+      <ul class="checks">
+        <li>Оптовые цены и счёт на оплату</li>
+        <li>Персональный менеджер и подбор по смете</li>
+        <li>Доставка на объект по графику стройки</li>
+      </ul>
+    </div>
+    <div class="note">
+      <b>Счёт и документы — из 1С</b>
+      <span>Заказ с сайта сразу попадает в учётную систему, менеджер выставляет счёт без перенабора.</span>
+      <a class="btn btn--ghost" href="mailto:{{ site.email }}">{{ site.email }}</a>
+    </div>
+  </div>
+</section>
+{% endblock %}

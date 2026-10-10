@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+{% load shop %}
+
+{% block title %}{{ product.title }} — цена {{ product.price_retail|rub }} | {{ site.name }}{% endblock %}
+{% block description %}{{ product.title }}: {{ product.price_retail|rub }} за {{ product.unit }}. {% if product.in_stock %}В наличии в Чебоксарах{% else %}Под заказ{% endif %}, доставка грузотакси.{% endblock %}
+
+{% block head %}
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"Product","name":"{{ product.title|escapejs }}","sku":"{{ product.sku|escapejs }}",
+ "offers":{"@type":"Offer","priceCurrency":"RUB","price":"{{ product.price_retail }}",
+ "availability":"https://schema.org/{% if product.in_stock %}InStock{% else %}PreOrder{% endif %}"}}
+</script>
+{% endblock %}
+
+{% block content %}
+<div class="wrap page">
+  <nav class="crumbs" aria-label="Навигация">
+    <a href="{% url 'catalog:home' %}">Главная</a>
+    <a href="{% url 'catalog:root' %}">Каталог</a>
+    {% for c in breadcrumbs %}<a href="{{ c.get_absolute_url }}">{{ c.name }}</a>{% endfor %}
+  </nav>
+
+  <div class="pdp">
+    <div class="pdp__gallery">
+      {% if product.image %}<img src="{{ product.image.url }}" alt="{{ product.title }}">
+      {% else %}{% root_of product.category as root %}<span class="ph ph--lg">{% category_icon root.name 120 %}</span>{% endif %}
+    </div>
+
+    <div class="pdp__info">
+      <h1>{{ product.title }}</h1>
+      {% if product.sku %}<p class="muted">Артикул: {{ product.sku }}</p>{% endif %}
+
+      <div class="buybox">
+        {% if product.can_buy %}
+          <div class="buybox__price"><b>{{ product.price_retail|rub }}</b><span>за {{ product.unit }}</span></div>
+          {% if product.price_wholesale %}
+            <div class="buybox__b2b">Для юрлиц цена ниже — <a class="link" href="{% url 'catalog:home' %}#b2b">как получить оптовые цены</a></div>
+          {% endif %}
+        {% else %}
+          <div class="buybox__price"><b>Цена по запросу</b></div>
+        {% endif %}
+
+        {% if product.in_stock %}<div class="stock stock--yes">В наличии на складе: {% unit_count product.stock product.unit %}</div>
+        {% else %}<div class="stock stock--no">Под заказ — срок уточнит менеджер</div>{% endif %}
+
+        <div class="buybox__actions">
+          <div class="stepper" data-stepper>
+            <button type="button" data-step="-1" aria-label="Меньше">−</button>
+            <input type="number" value="1" min="1" step="1" inputmode="numeric" aria-label="Количество">
+            <button type="button" data-step="1" aria-label="Больше">+</button>
+          </div>
+          <button class="btn btn--primary btn--lg" type="button" disabled title="Корзина появится на следующем шаге">В корзину</button>
+        </div>
+        <a class="link" href="tel:{{ site.phone_href }}">Заказать по телефону {{ site.phone }}</a>
+      </div>
+
+      <dl class="specs">
+        <div><dt>Единица</dt><dd>{{ product.unit }}</dd></div>
+        {% if product.weight_kg %}<div><dt>Вес</dt><dd>{{ product.weight_kg|qty }} кг</dd></div>{% endif %}
+        {% if product.volume_m3 %}<div><dt>Объём</dt><dd>{{ product.volume_m3|qty }} м³</dd></div>{% endif %}
+        {% if product.category %}<div><dt>Раздел</dt><dd><a href="{{ product.category.get_absolute_url }}">{{ product.category.name }}</a></dd></div>{% endif %}
+      </dl>
+    </div>
+  </div>
+
+  {% if product.description %}
+    <section class="section-sm">
+      <h2>Описание</h2>
+      <div class="prose">{{ product.description|linebreaks }}</div>
+    </section>
+  {% endif %}
+
+  {% if trucks %}
+    <section class="section-sm">
+      <h2>Сколько увезёт грузотакси</h2>
+      <p class="muted">Расчёт по весу: {{ product.weight_kg|qty }} кг за {{ product.unit }}. Точную машину подберём по всему заказу.</p>
+      <div class="capacity">
+        {% for t, n in trucks %}<div><b>{{ t }} т</b><span>до {% unit_count n product.unit %}</span></div>{% endfor %}
+      </div>
+    </section>
+  {% endif %}
+
+  {% if related %}
+    <section class="section-sm">
+      <h2>Ещё в разделе «{{ product.category.name }}»</h2>
+      <div class="grid">{% for p in related %}{% include "catalog/_product_card.html" %}{% endfor %}</div>
+    </section>
+  {% endif %}
+</div>
+{% endblock %}

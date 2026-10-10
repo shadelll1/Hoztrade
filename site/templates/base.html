@@ -1,0 +1,129 @@
+{% load static shop %}<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}{{ site.name }} — строительные материалы в Чебоксарах{% endblock %}</title>
+  <meta name="description" content="{% block description %}Стройматериалы, сухие смеси, сантехника, ламинат, поликарбонат и печное литьё в Чебоксарах. Доставка грузотакси от 1,5 до 20 тонн.{% endblock %}">
+  <link rel="stylesheet" href="{% static 'css/site.css' %}">
+  <link rel="icon" href="{% static 'img/favicon.svg' %}" type="image/svg+xml">
+  {% block head %}{% endblock %}
+</head>
+<body>
+<a class="skip" href="#main">К содержимому</a>
+
+<div class="topbar">
+  <div class="wrap topbar__in">
+    <span class="topbar__city">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 21s-7-6.2-7-11a7 7 0 0 1 14 0c0 4.8-7 11-7 11z"/><circle cx="12" cy="10" r="2.5"/></svg>
+      Чебоксары · 3 точки продаж
+    </span>
+    <nav class="topbar__nav" aria-label="Для покупателей">
+      <a href="#delivery">Доставка</a>
+      <a href="#b2b">Юрлицам</a>
+      <a href="#stores">Магазины</a>
+    </nav>
+    <a class="topbar__phone" href="tel:{{ site.phone_href }}">{{ site.phone }}</a>
+  </div>
+</div>
+
+<header class="header">
+  <div class="wrap header__in">
+    <a class="logo" href="{% url 'catalog:home' %}" aria-label="{{ site.name }} — на главную">
+      <svg class="logo__mark" width="40" height="40" viewBox="0 0 40 40" aria-hidden="true">
+        <rect width="40" height="40" rx="10" fill="var(--brand)"/>
+        <path d="M9 21 20 12l11 9" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M13 19v10h14V19" fill="none" stroke="#fff" stroke-width="3" stroke-linejoin="round"/>
+        <rect x="17.5" y="23" width="5" height="6" fill="var(--accent)"/>
+      </svg>
+      <span class="logo__text"><b>Хозтрейд</b><small>стройматериалы</small></span>
+    </a>
+
+    <button class="catalog-btn" type="button" aria-expanded="false" aria-controls="megamenu" data-megamenu-toggle>
+      <span class="burger" aria-hidden="true"><i></i><i></i><i></i></span>
+      <span class="catalog-btn__text">Каталог</span>
+    </button>
+
+    <form class="search" action="{% url 'catalog:search' %}" role="search">
+      <input type="search" name="q" value="{{ query|default:'' }}" placeholder="Цемент, ламинат, поликарбонат…" aria-label="Поиск по каталогу" autocomplete="off">
+      <button type="submit" aria-label="Найти">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+      </button>
+    </form>
+
+    <nav class="header__actions" aria-label="Быстрые действия">
+      <a class="hact" href="#order-list">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M9 4h6l1 2h3v15H5V6h3z"/><path d="M9 11h6M9 15h4"/></svg>
+        <span>Заказ по списку</span>
+      </a>
+      <a class="hact" href="#cart">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M3 4h2l2.4 11h11L21 7H6.2"/><circle cx="9" cy="19.5" r="1.5"/><circle cx="17" cy="19.5" r="1.5"/></svg>
+        <span>Корзина</span>
+      </a>
+    </nav>
+  </div>
+
+  <div class="megamenu" id="megamenu" hidden>
+    <div class="wrap megamenu__in">
+      {% for root in catalog_tree %}
+        <section class="mm-col">
+          <a class="mm-root" href="{{ root.get_absolute_url }}">{% category_icon root.name 22 %}<span>{{ root.name }}</span></a>
+          <ul>
+            {% for child in root.children %}<li><a href="{{ child.get_absolute_url }}">{{ child.name }}</a></li>{% endfor %}
+          </ul>
+        </section>
+      {% endfor %}
+    </div>
+  </div>
+
+  <nav class="catnav" aria-label="Разделы каталога">
+    <div class="wrap catnav__in">
+      {% for root in catalog_tree %}<a href="{{ root.get_absolute_url }}">{{ root.name }}</a>{% endfor %}
+    </div>
+  </nav>
+</header>
+
+<main id="main">
+  {% block content %}{% endblock %}
+</main>
+
+<footer class="footer">
+  <div class="wrap footer__grid">
+    <section>
+      <a class="logo logo--light" href="{% url 'catalog:home' %}">
+        <span class="logo__text"><b>Хозтрейд</b><small>стройматериалы · Чебоксары</small></span>
+      </a>
+      <p class="footer__lead">Более 10&nbsp;000 товаров для стройки, ремонта, дома и сада. Подберём материалы под ваш бюджет и привезём своим грузотакси.</p>
+      <a class="footer__phone" href="tel:{{ site.phone_href }}">{{ site.phone }}</a>
+      <a href="mailto:{{ site.email }}">{{ site.email }}</a>
+    </section>
+    <section>
+      <h3>Каталог</h3>
+      <ul>{% for root in catalog_tree %}<li><a href="{{ root.get_absolute_url }}">{{ root.name }}</a></li>{% endfor %}</ul>
+    </section>
+    <section>
+      <h3>Покупателям</h3>
+      <ul>
+        <li><a href="#delivery">Доставка грузотакси</a></li>
+        <li><a href="#order-list">Заказ по списку или смете</a></li>
+        <li><a href="#returns">Возврат и обмен — 14 дней</a></li>
+        <li><a href="#b2b">Корпоративным клиентам</a></li>
+      </ul>
+    </section>
+    <section id="stores">
+      <h3>Магазины в Чебоксарах</h3>
+      <ul class="footer__stores">
+        {% for store in site.stores %}<li><b>{{ store.title }}</b>{{ store.address }}</li>{% endfor %}
+      </ul>
+    </section>
+  </div>
+  <div class="wrap footer__bottom">
+    <span>© 2018–2026 {{ site.legal_name }}</span>
+    <span>Информация на сайте не является публичной офертой. Наличие и цены уточняйте у менеджеров.</span>
+  </div>
+</footer>
+
+<script src="{% static 'js/site.js' %}" defer></script>
+{% block scripts %}{% endblock %}
+</body>
+</html>

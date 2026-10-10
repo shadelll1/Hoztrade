@@ -55,6 +55,7 @@ TEMPLATES = [
                 "django.template.context_processors.request",
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
+                "catalog.context_processors.shop",
             ],
         },
     },
@@ -100,6 +101,24 @@ REST_FRAMEWORK = {
 
 # Токен, с которым 1С обращается к API обмена
 EXCHANGE_TOKEN = env("EXCHANGE_TOKEN")
+
+# Данные компании для шапки, подвала и контактов
+SITE_INFO = {
+    "name": "Хозтрейд",
+    "legal_name": "Группа компаний «Хозтрейд»",
+    "city": "Чебоксары",
+    "phone": "(8352) 22-33-77",
+    "phone_href": "+78352223377",
+    "email": "tpk21@mail.ru",
+    "stores": [
+        {"title": "Магазин на Машиностроителей", "address": "проезд Машиностроителей, 1, корп. 4"},
+        {"title": "Склад на Складском", "address": "Складской проезд, 6, склад 41"},
+        {"title": "Офис продаж", "address": "Складской проезд, 6, офис 108"},
+    ],
+}
+
+# Грузотакси «Хозтрейда»: грузоподъёмность машин, т. В бою — из 1С (справочник «Транспортные средства»).
+TRUCK_CAPACITIES_T = [1.5, 3, 5, 10, 20]
 
 EMAIL_BACKEND = env("EMAIL_BACKEND", default="django.core.mail.backends.console.EmailBackend")
 MANAGER_EMAILS = env.list("MANAGER_EMAILS", default=[])
