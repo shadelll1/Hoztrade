@@ -45,8 +45,24 @@
           {% include "orders/_field.html" with field=form.store class="field--wide" %}
         </div>
         <div class="fields" data-show-for="truck">
+          {% if zones %}
+          <fieldset class="zones field--wide{% if form.zone.errors %} field--error{% endif %}">
+            <legend>Куда везём</legend>
+            {% for z in zones %}
+              <label class="zone">
+                {{ z.radio.tag }}
+                <span class="zone__name"><b>{{ z.radio.choice_label }}</b>{% if z.quote.zone.description %}<small>{{ z.quote.zone.description }}</small>{% endif %}</span>
+                {% if z.quote %}<span class="zone__cost" data-cost="{{ z.quote.cost }}" data-truck="{{ z.quote.truck.name }}{% if z.quote.trips > 1 %} × {{ z.quote.trips }} {{ z.quote.trips|plural:'рейс,рейса,рейсов' }}{% endif %}">{{ z.quote.cost|rub }}</span>{% endif %}
+              </label>
+            {% endfor %}
+            {% for e in form.zone.errors %}<span class="field__error">{{ e }}</span>{% endfor %}
+          </fieldset>
+          {% endif %}
           {% include "orders/_field.html" with field=form.address class="field--wide" %}
-          <p class="hint">По весу заказа ({{ cart.weight|qty }} кг) подойдёт {% if cart.truck %}грузотакси {{ cart.truck }} т{% else %}несколько рейсов 20 т{% endif %}. Стоимость доставки менеджер назовёт при подтверждении.</p>
+          {% include "orders/_field.html" with field=form.delivery_interval %}
+          {% with t=cart.truck.0 trips=cart.truck.1 %}
+          <p class="hint" data-truck-hint>Вес заказа {{ cart.weight|qty }} кг{% if cart.volume %}, объём {{ cart.volume|qty }} м³{% endif %}{% if t %} — поедет <b data-truck-name>{{ t.name }}{% if trips > 1 %} × {{ trips }} {{ trips|plural:"рейс,рейса,рейсов" }}{% endif %}</b>{% endif %}.{% if not zones %} Стоимость доставки менеджер назовёт при подтверждении.{% endif %}</p>
+          {% endwith %}
         </div>
         <div class="fields">
           {% include "orders/_field.html" with field=form.delivery_date %}
@@ -67,7 +83,9 @@
       <ul class="summary__lines">
         {% for line in cart.lines %}<li><span>{{ line.product.name }} × {{ line.quantity }}</span><b>{{ line.amount|rub }}</b></li>{% endfor %}
       </ul>
-      <div class="summary__row summary__row--total"><span>Итого{% if cart.wholesale %} по оптовым ценам{% endif %}</span><b>{{ cart.total|rub }}</b></div>
+      <div class="summary__row"><span>Товары{% if cart.wholesale %} по оптовым ценам{% endif %}</span><b>{{ cart.total|rub }}</b></div>
+      <div class="summary__row" data-delivery-row hidden><span>Доставка</span><b data-delivery-cost></b></div>
+      <div class="summary__row summary__row--total"><span>Итого</span><b data-grand-total data-goods="{{ cart.total }}">{{ cart.total|rub }}</b></div>
       {% if not user.is_authenticated %}<p class="muted small"><a class="link" href="{% url 'accounts:login' %}?next={{ request.path|urlencode }}">Войдите</a>, чтобы заказ появился в личном кабинете.</p>{% endif %}
       <button class="btn btn--primary btn--lg btn--block" type="submit">Подтвердить заказ</button>
       <p class="muted small">Менеджер перезвонит, подтвердит наличие и время доставки. Оплата при получении или по счёту.</p>

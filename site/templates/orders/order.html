@@ -31,8 +31,13 @@
     {% if order.ext_number %}<div><dt>Номер в учётной системе</dt><dd>{{ order.ext_number }}</dd></div>{% endif %}
     <div><dt>Дата</dt><dd>{{ order.created_at|date:"j E Y, H:i" }}</dd></div>
     <div><dt>Покупатель</dt><dd>{{ order.company|default:order.name }}{% if order.inn %}, ИНН {{ order.inn }}{% endif %}</dd></div>
-    <div><dt>Получение</dt><dd>{% if order.delivery == 'truck' %}Доставка: {{ order.address }}{% if order.truck_t %} (грузотакси {{ order.truck_t|qty }} т){% endif %}{% else %}Самовывоз: {{ order.pickup_store }}{% endif %}</dd></div>
-    {% if order.delivery_date %}<div><dt>Желаемая дата</dt><dd>{{ order.delivery_date|date:"j E Y" }}</dd></div>{% endif %}
+    {% if order.delivery == 'truck' %}
+    <div><dt>Доставка</dt><dd>{% if order.zone %}{{ order.zone.name }}: {% endif %}{{ order.address }}</dd></div>
+    {% if order.truck_name or order.truck_t %}<div><dt>Машина</dt><dd>{{ order.truck_name|default:"грузотакси" }}{% if not order.truck_name %} {{ order.truck_t|qty }} т{% endif %}{% if order.trips > 1 %} × {{ order.trips }} {{ order.trips|plural:"рейс,рейса,рейсов" }}{% endif %}</dd></div>{% endif %}
+    {% else %}
+    <div><dt>Самовывоз</dt><dd>{{ order.pickup_store }}</dd></div>
+    {% endif %}
+    {% if order.delivery_date %}<div><dt>Желаемая дата</dt><dd>{{ order.delivery_date|date:"j E Y" }}{% if order.delivery_interval %}, {{ order.get_delivery_interval_display }}{% endif %}</dd></div>{% endif %}
   </dl>
 
   <section class="section-sm">
@@ -47,12 +52,16 @@
           {% endfor %}
         </tbody>
         <tfoot>
+          {% if order.delivery == 'truck' %}
+            <tr><td colspan="3">Товары{% if order.weight_kg %}, вес {{ order.weight_kg|qty }} кг{% endif %}</td><td class="num">{{ order.total|rub }}</td></tr>
+            <tr><td colspan="3">Доставка</td><td class="num">{% if order.delivery_cost is not None %}{{ order.delivery_cost|rub }}{% else %}<span class="muted">назовёт менеджер</span>{% endif %}</td></tr>
+          {% endif %}
           {% if order.discount %}
-            <tr><td colspan="3">Сумма на сайте</td><td class="num">{{ order.total|rub }}</td></tr>
+            <tr><td colspan="3">Сумма на сайте</td><td class="num">{{ order.grand_total|rub }}</td></tr>
             <tr class="discount"><td colspan="3">Скидка</td><td class="num">−{{ order.discount|rub }}</td></tr>
-            <tr><td colspan="3">Итого по счёту{% if order.weight_kg %}, вес {{ order.weight_kg|qty }} кг{% endif %}</td><td class="num"><b>{{ order.total_1c|rub }}</b></td></tr>
+            <tr><td colspan="3">Итого по счёту</td><td class="num"><b>{{ order.total_1c|rub }}</b></td></tr>
           {% else %}
-            <tr><td colspan="3">Итого{% if order.weight_kg %}, вес {{ order.weight_kg|qty }} кг{% endif %}</td><td class="num"><b>{{ order.total_1c|default:order.total|rub }}</b></td></tr>
+            <tr><td colspan="3">Итого{% if order.delivery != 'truck' and order.weight_kg %}, вес {{ order.weight_kg|qty }} кг{% endif %}</td><td class="num"><b>{{ order.total_1c|default:order.grand_total|rub }}</b></td></tr>
           {% endif %}
         </tfoot>
       </table>

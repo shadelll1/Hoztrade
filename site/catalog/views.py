@@ -1,10 +1,11 @@
 import math
 from decimal import Decimal, InvalidOperation
 
-from django.conf import settings
 from django.core.paginator import Paginator
 from django.db.models import Case, IntegerField, Value, When
 from django.shortcuts import get_object_or_404, render
+
+from delivery.services import fleet
 
 from .models import Category, Product
 from .tree import build_tree, find_node
@@ -63,7 +64,7 @@ def home(request):
     in_stock = _in_stock_first(Product.objects.published().filter(stock__gt=0, price_retail__gt=0))
     return render(request, "catalog/home.html", {
         "products": in_stock.select_related("category")[:8],
-        "trucks": settings.TRUCK_CAPACITIES_T,
+        "trucks": fleet(),
     })
 
 
@@ -94,10 +95,14 @@ def product(request, slug):
         .select_related("category")[:4]
         if item.category_id else []
     )
+    # Сколько единиц товара помещается в каждую машину — по весу и, если известен, по объёму кузова.
     trucks = []
     if item.weight_kg > 0:
-        for capacity in settings.TRUCK_CAPACITIES_T:
-            trucks.append((capacity, math.floor(Decimal(str(capacity)) * 1000 / item.weight_kg)))
+        for truck in fleet():
+            fits = math.floor(truck.capacity_kg / item.weight_kg)
+            if truck.volume_m3 > 0 and item.volume_m3 > 0:
+                fits = min(fits, math.floor(truck.volume_m3 / item.volume_m3))
+            trucks.append((truck, fits))
     return render(request, "catalog/product.html", {
         "product": item,
         "breadcrumbs": (item.category.ancestors() + [item.category]) if item.category_id else [],

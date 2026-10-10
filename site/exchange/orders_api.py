@@ -35,17 +35,12 @@ def order_to_json(order):
             "company": order.company,
             "inn": order.inn,
         },
-        "delivery": {
-            "method": order.delivery,
-            "store": order.pickup_store,
-            "address": order.address,
-            "date": order.delivery_date.isoformat() if order.delivery_date else None,
-            "truck_t": _num(order.truck_t),
-        },
+        "delivery": _delivery_json(order),
         "comment": order.comment,
         "price_type": order.price_type,
         "total": _num(order.total),
         "weight_kg": _num(order.weight_kg),
+        "volume_m3": _num(order.volume_m3),
         "items": [
             {
                 "product_id": str(i.product_ext_id) if i.product_ext_id else None,
@@ -58,6 +53,25 @@ def order_to_json(order):
             }
             for i in order.items.all()
         ],
+    }
+
+
+def _delivery_json(order):
+    time_from, time_to = order.interval_times
+    zone = order.zone
+    return {
+        "method": order.delivery,
+        "store": order.pickup_store,
+        "address": order.address,
+        "date": order.delivery_date.isoformat() if order.delivery_date else None,
+        "time_from": time_from,
+        "time_to": time_to,
+        "zone_id": str(zone.ext_id) if zone is not None and zone.ext_id else None,
+        "zone": zone.name if zone is not None else "",
+        "truck_t": _num(order.truck_t),
+        "truck": order.truck_name,
+        "trips": order.trips if order.delivery == Order.Delivery.TRUCK else 0,
+        "cost": _num(order.delivery_cost),
     }
 
 

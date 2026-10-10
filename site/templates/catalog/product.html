@@ -81,9 +81,9 @@
   {% if trucks %}
     <section class="section-sm">
       <h2>Сколько увезёт грузотакси</h2>
-      <p class="muted">Расчёт по весу: {{ product.weight_kg|qty }} кг за {{ product.unit }}. Точную машину подберём по всему заказу.</p>
+      <p class="muted">Расчёт по весу{% if product.volume_m3 %} и объёму{% endif %}: {{ product.weight_kg|qty }} кг{% if product.volume_m3 %}, {{ product.volume_m3|qty }} м³{% endif %} за {{ product.unit }}. Машину по всему заказу сайт подберёт в корзине, <a class="link" href="{% url 'pages:delivery' %}">тарифы на доставку</a>.</p>
       <div class="capacity">
-        {% for t, n in trucks %}<div><b>{{ t }} т</b><span>до {% unit_count n product.unit %}</span></div>{% endfor %}
+        {% for t, n in trucks %}<div><b>{{ t.capacity_t|qty }} т</b><span>до {% unit_count n product.unit %}</span></div>{% endfor %}
       </div>
     </section>
   {% endif %}

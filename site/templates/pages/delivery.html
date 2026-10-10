@@ -1,13 +1,47 @@
 {% extends "pages/_page.html" %}
-{% block title %}Доставка грузотакси | {{ site.name }}{% endblock %}
+{% load shop static %}
+{% block title %}Доставка грузотакси: тарифы по зонам | {{ site.name }}{% endblock %}
+{% block description %}Доставка стройматериалов по Чебоксарам, Новочебоксарску и району собственным грузотакси от 1,5 до 20 тонн. Тарифы по зонам и калькулятор стоимости.{% endblock %}
 {% block crumb %}Доставка{% endblock %}{% block h1 %}Доставка грузотакси{% endblock %}
 {% block body %}
 <p>У «Хозтрейда» собственная логистическая служба и автопарк грузотакси грузоподъёмностью от 1,5 до 20 тонн. Перевозчика искать не нужно, а сроки не срываются по вине третьих лиц.</p>
+
 <h2>Как подбирается машина</h2>
-<p>Сайт считает вес корзины и подсказывает, какая машина увезёт заказ. На карточке каждого товара видно, сколько единиц помещается в машину каждого размера. Окончательно машину и время согласует менеджер.</p>
-<div class="capacity"><div><b>1,5 т</b><span>небольшой заказ</span></div><div><b>3 т</b><span>поддон блоков</span></div><div><b>5 т</b><span>кровля на дом</span></div><div><b>10 т</b><span>коробка дома</span></div><div><b>20 т</b><span>крупный объект</span></div></div>
-<h2>Стоимость</h2>
+<p>Сайт считает вес и объём корзины и выбирает наименьшую машину, которая увезёт заказ за один рейс. Если заказ тяжелее самой большой машины — привезём в несколько рейсов. На карточке товара видно, сколько единиц помещается в машину каждого размера.</p>
+{% if trucks %}
+<div class="capacity">{% for t in trucks %}<div><b>{{ t.capacity_t|qty }} т</b><span>{{ t.name }}{% if t.volume_m3 %}, {{ t.volume_m3|qty }} м³{% endif %}</span></div>{% endfor %}</div>
+{% endif %}
+
+<h2>Стоимость рейса</h2>
+{% if rows %}
+<div class="table-wrap">
+  <table class="table tariffs">
+    <thead><tr><th>Зона</th>{% for t in trucks %}<th>{{ t.capacity_t|qty }} т</th>{% endfor %}</tr></thead>
+    <tbody>
+      {% for zone, prices in rows %}
+      <tr><td><b>{{ zone.name }}</b>{% if zone.description %}<small>{{ zone.description }}</small>{% endif %}</td>
+        {% for p in prices %}<td>{% if p is not None %}{{ p|rub }}{% else %}—{% endif %}</td>{% endfor %}</tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+<p class="muted small">Цена — за один рейс машины до адреса. Разгрузка, подъём на этаж и доставка дальше 60 км — по договорённости.</p>
+
+<h2>Калькулятор</h2>
+<form class="calc" data-delivery-calc onsubmit="return false">
+  <div class="field"><label for="calc-weight">Вес груза, кг</label><input id="calc-weight" type="number" min="1" step="1" value="500" inputmode="numeric"></div>
+  <div class="field"><label for="calc-zone">Куда</label><select id="calc-zone">{% for zone, prices in rows %}<option value="{{ forloop.counter0 }}">{{ zone.name }}</option>{% endfor %}</select></div>
+  <output class="calc__result" for="calc-weight calc-zone" data-calc-result aria-live="polite"></output>
+</form>
+{{ calc|json_script:"delivery-calc-data" }}
+{% else %}
 <p>Стоимость зависит от машины и адреса — менеджер назовёт её при подтверждении заказа. Уточнить заранее: <a href="tel:{{ site.phone_href }}">{{ site.phone }}</a>.</p>
+{% endif %}
+
+<h2>Когда привезём</h2>
+<p>При оформлении заказа выберите дату и удобный интервал: 09:00–13:00, 13:00–18:00 или 18:00–21:00. Менеджер подтвердит время по телефону, а водитель позвонит перед выездом.</p>
+
 <h2>Самовывоз</h2>
 <ul>{% for s in site.stores %}<li>{{ s.title }} — {{ s.address }}</li>{% endfor %}</ul>
 {% endblock %}
+{% block scripts %}<script src="{% static 'js/delivery.js' %}" defer></script>{% endblock %}

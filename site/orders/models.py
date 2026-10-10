@@ -58,10 +58,18 @@ class Order(ExchangeFields):
     company = models.CharField("Организация", max_length=250, blank=True)
     inn = models.CharField("ИНН", max_length=12, blank=True)
 
+    class Interval(models.TextChoices):
+        MORNING = "09-13", "09:00–13:00"
+        DAY = "13-18", "13:00–18:00"
+        EVENING = "18-21", "18:00–21:00"
+
     delivery = models.CharField("Получение", max_length=10, choices=Delivery.choices, default=Delivery.PICKUP)
     pickup_store = models.CharField("Пункт самовывоза", max_length=250, blank=True)
+    zone = models.ForeignKey("delivery.Zone", verbose_name="Зона доставки", null=True, blank=True,
+                             on_delete=models.SET_NULL, related_name="orders")
     address = models.CharField("Адрес доставки", max_length=500, blank=True)
     delivery_date = models.DateField("Желаемая дата", null=True, blank=True)
+    delivery_interval = models.CharField("Время доставки", max_length=5, choices=Interval.choices, blank=True)
     comment = models.TextField("Комментарий", blank=True)
 
     # Оптовые — у подтверждённой компании; в 1С заказ получает оптовый вид цен из настройки обмена.
@@ -70,7 +78,13 @@ class Order(ExchangeFields):
     # Итог из 1С: учитывает скидки и акции, которые настроены в учётной системе, а не на сайте.
     total_1c = models.DecimalField("Сумма в 1С", max_digits=14, decimal_places=2, null=True, blank=True)
     weight_kg = models.DecimalField("Вес, кг", max_digits=12, decimal_places=3, default=Decimal("0"))
-    truck_t = models.DecimalField("Машина, т", max_digits=5, decimal_places=1, null=True, blank=True)
+    volume_m3 = models.DecimalField("Объём, м³", max_digits=12, decimal_places=4, default=Decimal("0"))
+    # Расчёт доставки на момент заказа: машина, рейсы и стоимость по тарифу зоны.
+    # Пустая стоимость — тарифа не было, стоимость назовёт менеджер.
+    truck_t = models.DecimalField("Машина, т", max_digits=6, decimal_places=3, null=True, blank=True)
+    truck_name = models.CharField("Машина", max_length=150, blank=True)
+    trips = models.PositiveSmallIntegerField("Рейсов", default=1)
+    delivery_cost = models.DecimalField("Стоимость доставки", max_digits=12, decimal_places=2, null=True, blank=True)
 
     created_at = models.DateTimeField("Создан", auto_now_add=True)
     updated_at = models.DateTimeField("Изменён", auto_now=True)
@@ -91,11 +105,24 @@ class Order(ExchangeFields):
         return reverse("orders:detail", args=[self.token])
 
     @property
+    def grand_total(self):
+        """Сумма на сайте вместе с доставкой — с ней сравнивается итог документа в 1С."""
+        return self.total + (self.delivery_cost or 0)
+
+    @property
     def discount(self):
         """Скидка, которую дала 1С (разница с суммой на сайте)."""
-        if self.total_1c is None or self.total_1c >= self.total:
+        if self.total_1c is None or self.total_1c >= self.grand_total:
             return None
-        return self.total - self.total_1c
+        return self.grand_total - self.total_1c
+
+    @property
+    def interval_times(self):
+        """("09:00", "13:00") для выбранного интервала доставки или (None, None)."""
+        if not self.delivery_interval:
+            return None, None
+        start, end = self.delivery_interval.split("-")
+        return f"{start}:00", f"{end}:00"
 
 
 class OrderItem(models.Model):

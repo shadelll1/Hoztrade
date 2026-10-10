@@ -1,5 +1,6 @@
 import io
 import uuid
+from decimal import Decimal
 
 import pytest
 from django.core.cache import cache
@@ -8,6 +9,7 @@ from django.core.management import call_command
 from rest_framework.test import APIClient
 
 from catalog.models import Product
+from delivery.models import Zone
 from orders.forms import inn_is_valid, normalize_phone
 from orders.models import Lead, Order
 
@@ -33,9 +35,10 @@ def api():
 
 
 def checkout_data(**extra):
+    zone = Zone.objects.filter(name="Чебоксары").values_list("pk", flat=True).first()
     data = {"customer_type": "person", "name": "Иван", "phone": "8 (900) 123-45-67", "email": "",
-            "delivery": "truck", "address": "Чебоксары, ул. Ленина, 1", "store": "",
-            "comment": "", "consent": "on", "website": ""}
+            "delivery": "truck", "zone": zone or "", "address": "Чебоксары, ул. Ленина, 1", "store": "",
+            "delivery_interval": "09-13", "comment": "", "consent": "on", "website": ""}
     data.update(extra)
     return data
 
@@ -56,9 +59,10 @@ class TestCartAndCheckout:
         client.post(f"/cart/add/{cement.pk}/", {"quantity": 3})
         r = client.get("/cart/")
         assert r.context["cart"].total == 3 * cement.price_retail
-        assert r.context["cart"].truck == 1.5  # 150 кг
+        assert r.context["cart"].truck[0].capacity_t == Decimal("1.5")  # 150 кг
+        assert r.context["cart"].delivery_from.cost == 800  # Чебоксары, 1,5 т
         client.post(f"/cart/update/{cement.pk}/", {"quantity": 40})  # 2 т
-        assert client.get("/cart/").context["cart"].truck == 3
+        assert client.get("/cart/").context["cart"].truck[0].capacity_t == 3
         client.post(f"/cart/remove/{cement.pk}/")
         assert not client.get("/cart/").context["cart"].lines
 
@@ -74,7 +78,9 @@ class TestCartAndCheckout:
         order = Order.objects.get()
         assert r.status_code == 302 and str(order.token) in r["Location"]
         assert order.phone == "+79001234567"
-        assert order.total == 2 * cement.price_retail and order.truck_t == 1.5
+        assert order.total == 2 * cement.price_retail and order.truck_t == Decimal("1.5")
+        assert order.zone.name == "Чебоксары" and order.delivery_cost == 800 and order.trips == 1
+        assert order.grand_total == order.total + 800 and order.delivery_interval == "09-13"
         item = order.items.get()
         assert item.product_ext_id == cement.ext_id and item.quantity == 2
         assert client.get("/cart/").context["cart"].lines == []
@@ -150,12 +156,18 @@ class TestExchangeOrders:
         assert r.json()["acknowledged"] == 1
         assert api.get("/api/v1/orders/new/").json()["orders"] == []
 
+        delivery = data[0]["delivery"]
+        assert delivery["zone"] == "Чебоксары" and delivery["cost"] == 800 and delivery["trips"] == 1
+        assert delivery["time_from"] == "09:00" and delivery["time_to"] == "13:00"
+        assert data[0]["volume_m3"] == pytest.approx(0.07)
+
+        # Итог в 1С включает доставку: 2 x 520 со скидкой 5 % + 800 за рейс
         r = api.post("/api/v1/orders/status/", {"orders": [{"id": order.pk, "status": "confirmed",
-                                                             "status_text": "В работе", "total": 988}]}, format="json")
+                                                             "status_text": "В работе", "total": 1788}]}, format="json")
         assert r.json()["updated"] == 1
         order.refresh_from_db()
         assert order.status == "confirmed" and order.ext_number == "УТ-00012" and order.in_1c
-        assert order.total == 1040 and order.discount == 52  # 2 x 520, скидка 5 % из 1С
+        assert order.total == 1040 and order.discount == 52
         assert "Скидка" in client.get(order.get_absolute_url()).content.decode()
 
     def test_status_validation(self, api, db):

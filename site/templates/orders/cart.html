@@ -45,15 +45,16 @@
       <div class="summary__row"><span>Товары, {{ cart.lines|length }} поз.</span><b>{{ cart.total|rub }}</b></div>
       {% if cart.wholesale %}<div class="b2b-note"><b>Оптовые цены</b><span>для {{ user.profile.company }}</span></div>{% endif %}
       <div class="summary__row"><span>Вес</span><span>{{ cart.weight|qty }} кг</span></div>
+      {% with t=cart.truck.0 trips=cart.truck.1 q=cart.delivery_from %}
+      {% if t %}
       <div class="summary__truck">
-        {% if cart.truck %}
-          <b>Грузотакси {{ cart.truck }} т</b>
-          <span>увезёт весь заказ по весу. Стоимость доставки посчитает менеджер.</span>
-        {% else %}
-          <b>Больше 20 т</b>
-          <span>Привезём в несколько рейсов — менеджер согласует график.</span>
-        {% endif %}
+        <b>{{ t.name }}{% if trips > 1 %} × {{ trips }} {{ trips|plural:"рейс,рейса,рейсов" }}{% endif %}</b>
+        <span>{% if trips > 1 %}Заказ тяжелее самой большой машины — привезём в несколько рейсов.{% else %}увезёт весь заказ за один рейс.{% endif %}
+          {% if q %}Доставка от {{ q.cost|rub }} ({{ q.zone.name }}).{% endif %}</span>
+        <a class="link small" href="{% url 'pages:delivery' %}">Тарифы на доставку</a>
       </div>
+      {% endif %}
+      {% endwith %}
       <a class="btn btn--primary btn--lg btn--block" href="{% url 'orders:checkout' %}">Оформить заказ</a>
       <p class="muted small">Оплата при получении или по счёту для юрлиц. Цены и наличие подтвердит менеджер.</p>
     </aside>

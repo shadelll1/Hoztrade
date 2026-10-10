@@ -51,8 +51,29 @@
         box.hidden = !(key === type || key === delivery);
       });
     };
-    checkout.addEventListener("change", sync);
+    // Стоимость доставки выбранной зоны — в сводку заказа (сервер пересчитает её при оформлении)
+    var deliveryRow = checkout.querySelector("[data-delivery-row]");
+    var deliveryCost = checkout.querySelector("[data-delivery-cost]");
+    var grandTotal = checkout.querySelector("[data-grand-total]");
+    var truckName = checkout.querySelector("[data-truck-name]");
+    var rub = function (n) {
+      return new Intl.NumberFormat("ru-RU", { maximumFractionDigits: 2 }).format(n) + " ₽";
+    };
+    var recalc = function () {
+      var delivery = (checkout.querySelector("[name=delivery]:checked") || {}).value;
+      var zone = checkout.querySelector("[name=zone]:checked");
+      var quote = zone && zone.closest(".zone").querySelector("[data-cost]");
+      var cost = delivery === "truck" && quote ? parseFloat(quote.dataset.cost) : 0;
+      if (deliveryRow) {
+        deliveryRow.hidden = !cost;
+        deliveryCost.textContent = rub(cost);
+        grandTotal.textContent = rub(parseFloat(grandTotal.dataset.goods) + cost);
+      }
+      if (truckName && quote) truckName.textContent = quote.dataset.truck;
+    };
+    checkout.addEventListener("change", function () { sync(); recalc(); });
     sync();
+    recalc();
   }
 
   // Окно «Перезвоним вам»

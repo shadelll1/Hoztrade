@@ -1,4 +1,5 @@
 import io
+from decimal import Decimal
 
 import pytest
 from django.core.management import call_command
@@ -60,7 +61,8 @@ class TestStorefront:
 
     def test_truck_capacity(self, client, demo):
         r = client.get(Product.objects.get(sku="ЦМ-500-50").get_absolute_url())
-        assert dict(r.context["trucks"])[1.5] == 30
+        fits = {truck.capacity_t: n for truck, n in r.context["trucks"]}
+        assert fits[Decimal("1.5")] == 30 and fits[Decimal("20")] == 400  # мешки по 50 кг
 
 
 @pytest.mark.django_db

@@ -1,12 +1,17 @@
 import re
+from datetime import timedelta
 
 from django import forms
 from django.conf import settings
 from django.core.exceptions import ValidationError
+from django.utils import timezone
+
+from delivery.models import Zone
 
 from .models import Lead, Order
 
 PHONE_HELP = "Например, +7 900 123-45-67"
+MAX_DELIVERY_DAYS = 60
 MAX_UPLOAD_MB = 10
 ALLOWED_UPLOADS = {".pdf", ".jpg", ".jpeg", ".png", ".heic", ".doc", ".docx", ".xls", ".xlsx", ".txt"}
 
@@ -58,10 +63,11 @@ class CheckoutForm(AntiSpamMixin, forms.ModelForm):
     class Meta:
         model = Order
         fields = ["customer_type", "name", "phone", "email", "company", "inn",
-                  "delivery", "address", "delivery_date", "comment"]
+                  "delivery", "zone", "address", "delivery_date", "delivery_interval", "comment"]
         widgets = {
             "customer_type": forms.RadioSelect,
             "delivery": forms.RadioSelect,
+            "zone": forms.RadioSelect,
             "delivery_date": forms.DateInput(attrs={"type": "date"}),
             "comment": forms.Textarea(attrs={"rows": 3, "placeholder": "Подъезд, разгрузка, удобное время"}),
             "phone": forms.TextInput(attrs={"type": "tel", "placeholder": PHONE_HELP, "autocomplete": "tel"}),
@@ -76,6 +82,13 @@ class CheckoutForm(AntiSpamMixin, forms.ModelForm):
         self.fields["store"].choices = [(s, s) for s in stores]
         self.fields["store"].initial = stores[0]
         self.fields["phone"].help_text = ""
+        # Только зоны, куда есть тариф; если 1С ещё не прислала тарифы, стоимость назовёт менеджер.
+        self.fields["zone"].queryset = Zone.objects.filter(is_active=True, tariffs__truck__is_active=True).distinct()
+        self.fields["zone"].empty_label = None
+        self.fields["delivery_interval"].choices = [("", "Любое")] + list(Order.Interval.choices)
+        today = timezone.localdate()
+        self.fields["delivery_date"].widget.attrs.update({
+            "min": today.isoformat(), "max": (today + timedelta(days=MAX_DELIVERY_DAYS)).isoformat()})
 
         # Вошедшему покупателю — контакты из профиля. Подтверждённая компания покупает только на себя:
         # реквизиты берутся из профиля, а не из формы, иначе оптовые цены можно было бы отдать кому угодно.
@@ -97,6 +110,15 @@ class CheckoutForm(AntiSpamMixin, forms.ModelForm):
     def clean_phone(self):
         return normalize_phone(self.cleaned_data["phone"])
 
+    def clean_delivery_date(self):
+        value = self.cleaned_data.get("delivery_date")
+        today = timezone.localdate()
+        if value and value < today:
+            raise ValidationError("Дата уже прошла")
+        if value and value > today + timedelta(days=MAX_DELIVERY_DAYS):
+            raise ValidationError(f"Можно выбрать дату не дальше {MAX_DELIVERY_DAYS} дней")
+        return value
+
     def clean(self):
         data = super().clean()
         if self.wholesale_profile is not None:
@@ -115,8 +137,12 @@ class CheckoutForm(AntiSpamMixin, forms.ModelForm):
         if data.get("delivery") == Order.Delivery.TRUCK:
             if not data.get("address"):
                 self.add_error("address", "Укажите адрес доставки")
+            if not data.get("zone") and self.fields["zone"].queryset.exists() and "zone" not in self.errors:
+                self.add_error("zone", "Выберите зону доставки")
         else:
             data["address"] = ""
+            data["zone"] = None
+            data["delivery_interval"] = ""
         return data
 
 

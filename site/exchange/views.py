@@ -15,6 +15,8 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from catalog.models import Product
+from delivery.serializers import DeliveryUploadSerializer
+from delivery.services import import_delivery
 
 from .serializers import CatalogUploadSerializer
 from .services import import_catalog, remove_product_image
@@ -62,6 +64,16 @@ class CatalogUploadView(ExchangeView):
         if not serializer.is_valid():
             return Response({"errors": serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
         return Response(import_catalog(serializer.validated_data))
+
+
+class DeliveryUploadView(ExchangeView):
+    """Зоны доставки, автопарк и тарифы — полной посылкой."""
+
+    def post(self, request):
+        serializer = DeliveryUploadSerializer(data=request.data)
+        if not serializer.is_valid():
+            return Response({"errors": serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
+        return Response(import_delivery(serializer.validated_data))
 
 
 MAX_IMAGE_BYTES = 5 * 1024 * 1024

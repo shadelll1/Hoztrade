@@ -92,7 +92,9 @@ def checkout(request):
                 f"{order.name}, {order.phone}\n{request.build_absolute_uri(reverse('admin:orders_order_change', args=[order.pk]))}")
         return redirect(order.get_absolute_url() + "?new=1")
 
-    return render(request, "orders/checkout.html", {"cart": cart, "form": form,
+    quotes = cart.delivery_quotes
+    zones = [{"radio": radio, "quote": quotes.get(int(str(radio.data["value"])))} for radio in form["zone"]]
+    return render(request, "orders/checkout.html", {"cart": cart, "form": form, "zones": zones,
                                                     "company_profile": form.wholesale_profile})
 
 
@@ -111,7 +113,9 @@ def _create_order(request, form, cart):
     order.price_type = Order.PriceType.WHOLESALE if cart.wholesale else Order.PriceType.RETAIL
     order.total = cart.total
     order.weight_kg = cart.weight
-    order.truck_t = cart.truck if order.delivery == Order.Delivery.TRUCK else None
+    order.volume_m3 = cart.volume
+    if order.delivery == Order.Delivery.TRUCK:
+        _apply_delivery(order, cart)
     order.save()
     OrderItem.objects.bulk_create([
         OrderItem(
@@ -122,6 +126,20 @@ def _create_order(request, form, cart):
         for line in cart.lines
     ])
     return order
+
+
+def _apply_delivery(order, cart):
+    """Машина, рейсы и стоимость доставки по тарифу зоны. Без тарифа — только машина по весу, цену назовёт менеджер."""
+    quote = cart.delivery_quotes.get(order.zone_id) if order.zone_id else None
+    if quote is not None:
+        truck, trips = quote.truck, quote.trips
+        order.delivery_cost = quote.cost
+    else:
+        truck, trips = cart.truck
+    if truck is not None:
+        order.truck_t = truck.capacity_t
+        order.truck_name = truck.name
+        order.trips = trips
 
 
 def order_detail(request, token):

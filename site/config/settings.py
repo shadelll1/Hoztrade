@@ -32,6 +32,7 @@ INSTALLED_APPS = [
     "rest_framework",
     "catalog",
     "orders",
+    "delivery",
     "pages",
     "exchange",
     "accounts",
@@ -126,9 +127,6 @@ SITE_INFO = {
         {"title": "Офис продаж", "address": "Складской проезд, 6, офис 108"},
     ],
 }
-
-# Грузотакси «Хозтрейда»: грузоподъёмность машин, т. В бою — из 1С (справочник «Транспортные средства»).
-TRUCK_CAPACITIES_T = [1.5, 3, 5, 10, 20]
 
 EMAIL_BACKEND = env("EMAIL_BACKEND", default="django.core.mail.backends.console.EmailBackend")
 MANAGER_EMAILS = env.list("MANAGER_EMAILS", default=[])
