@@ -61,6 +61,8 @@ class Order(ExchangeFields):
     comment = models.TextField("Комментарий", blank=True)
 
     total = models.DecimalField("Сумма", max_digits=14, decimal_places=2, default=Decimal("0"))
+    # Итог из 1С: учитывает скидки и акции, которые настроены в учётной системе, а не на сайте.
+    total_1c = models.DecimalField("Сумма в 1С", max_digits=14, decimal_places=2, null=True, blank=True)
     weight_kg = models.DecimalField("Вес, кг", max_digits=12, decimal_places=3, default=Decimal("0"))
     truck_t = models.DecimalField("Машина, т", max_digits=5, decimal_places=1, null=True, blank=True)
 
@@ -81,6 +83,13 @@ class Order(ExchangeFields):
 
     def get_absolute_url(self):
         return reverse("orders:detail", args=[self.token])
+
+    @property
+    def discount(self):
+        """Скидка, которую дала 1С (разница с суммой на сайте)."""
+        if self.total_1c is None or self.total_1c >= self.total:
+            return None
+        return self.total - self.total_1c
 
 
 class OrderItem(models.Model):

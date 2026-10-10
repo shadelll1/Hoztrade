@@ -46,7 +46,15 @@
               <td class="num">{% unit_count i.quantity i.unit %}</td><td class="num">{{ i.price|rub }}</td><td class="num">{{ i.amount|rub }}</td></tr>
           {% endfor %}
         </tbody>
-        <tfoot><tr><td colspan="3">Итого{% if order.weight_kg %}, вес {{ order.weight_kg|qty }} кг{% endif %}</td><td class="num"><b>{{ order.total|rub }}</b></td></tr></tfoot>
+        <tfoot>
+          {% if order.discount %}
+            <tr><td colspan="3">Сумма на сайте</td><td class="num">{{ order.total|rub }}</td></tr>
+            <tr class="discount"><td colspan="3">Скидка</td><td class="num">−{{ order.discount|rub }}</td></tr>
+            <tr><td colspan="3">Итого по счёту{% if order.weight_kg %}, вес {{ order.weight_kg|qty }} кг{% endif %}</td><td class="num"><b>{{ order.total_1c|rub }}</b></td></tr>
+          {% else %}
+            <tr><td colspan="3">Итого{% if order.weight_kg %}, вес {{ order.weight_kg|qty }} кг{% endif %}</td><td class="num"><b>{{ order.total_1c|default:order.total|rub }}</b></td></tr>
+          {% endif %}
+        </tfoot>
       </table>
     </div>
   </section>

@@ -104,11 +104,14 @@
 ### POST /api/v1/orders/status/
 
 ```json
-{"orders": [{"id": 1, "status": "confirmed", "status_text": "В работе", "ext_number": "00ХТ-000012"}]}
+{"orders": [{"id": 1, "status": "confirmed", "status_text": "В работе", "ext_number": "00ХТ-000012",
+             "total": 22420.00}]}
 ```
 
 `status`: `new` | `accepted` | `confirmed` | `shipping` | `done` | `canceled` — по нему сайт рисует шаги
-заказа у покупателя. `status_text` — состояние заказа в 1С как есть. Ответ: `{"updated": 1}`.
+заказа у покупателя. `status_text` — состояние заказа в 1С как есть. `total` (необязательно) — сумма
+документа в 1С: учитывает скидки и акции, настроенные в учётной системе; если она меньше суммы на сайте,
+покупатель видит скидку и итог по счёту. Ответ: `{"updated": 1}`.
 
 ### GET /api/v1/leads/new/ и POST /api/v1/leads/ack/
 

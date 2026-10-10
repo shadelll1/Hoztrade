@@ -17,7 +17,7 @@ class OrderAdmin(admin.ModelAdmin):
                     "status", "ext_number", "exported_at"]
     list_filter = ["status", "delivery", "customer_type"]
     search_fields = ["name", "phone", "email", "company", "inn", "ext_number"]
-    readonly_fields = ["token", "total", "weight_kg", "truck_t", "ext_id", "ext_number", "exported_at",
+    readonly_fields = ["token", "total", "total_1c", "weight_kg", "truck_t", "ext_id", "ext_number", "exported_at",
                        "status_text", "created_at"]
     inlines = [OrderItemInline]
 

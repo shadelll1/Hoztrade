@@ -90,6 +90,7 @@ class StatusItem(serializers.Serializer):
     status = serializers.ChoiceField(choices=Order.Status.choices)
     status_text = serializers.CharField(max_length=100, required=False, allow_blank=True, default="")
     ext_number = serializers.CharField(max_length=30, required=False, allow_blank=True, default="")
+    total = serializers.DecimalField(max_digits=14, decimal_places=2, min_value=0, required=False, allow_null=True)
 
 
 def _ack(model, items):
@@ -127,6 +128,8 @@ class OrdersStatusView(ExchangeView):
             fields = {"status": item["status"], "status_text": item["status_text"]}
             if item["ext_number"]:
                 fields["ext_number"] = item["ext_number"]
+            if item.get("total") is not None:
+                fields["total_1c"] = item["total"]
             updated += Order.objects.filter(pk=item["id"]).update(**fields, updated_at=timezone.now())
         return Response({"updated": updated})
 

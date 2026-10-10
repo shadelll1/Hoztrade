@@ -1,3 +1,8 @@
 # Исходники 1С: UTF-8 с BOM и CRLF, как их пишет Конфигуратор. Git не должен их трогать.
 1c/** -text
 *.bat -text
+# Сайт: всегда LF
+site/** text eol=lf
+site/**/*.bat -text
+*.jpg binary
+*.png binary

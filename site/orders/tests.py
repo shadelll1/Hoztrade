@@ -151,10 +151,12 @@ class TestExchangeOrders:
         assert api.get("/api/v1/orders/new/").json()["orders"] == []
 
         r = api.post("/api/v1/orders/status/", {"orders": [{"id": order.pk, "status": "confirmed",
-                                                             "status_text": "В работе"}]}, format="json")
+                                                             "status_text": "В работе", "total": 988}]}, format="json")
         assert r.json()["updated"] == 1
         order.refresh_from_db()
         assert order.status == "confirmed" and order.ext_number == "УТ-00012" and order.in_1c
+        assert order.total == 1040 and order.discount == 52  # 2 x 520, скидка 5 % из 1С
+        assert "Скидка" in client.get(order.get_absolute_url()).content.decode()
 
     def test_status_validation(self, api, db):
         r = api.post("/api/v1/orders/status/", {"orders": [{"id": 1, "status": "bogus"}]}, format="json")

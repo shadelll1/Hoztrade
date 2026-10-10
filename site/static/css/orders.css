@@ -98,6 +98,7 @@
 .table th { color: var(--muted); font-weight: 600; font-size: 13px; }
 .table .num { text-align: right; white-space: nowrap; }
 .table tfoot td { border-bottom: 0; }
+.table tr.discount td { color: var(--brand-dark); font-weight: 600; }
 
 /* Окно «Перезвоним вам» */
 .dialog { border: 0; border-radius: var(--radius); padding: 0; width: min(420px, calc(100vw - 32px)); box-shadow: 0 24px 60px rgba(0, 0, 0, .25); }
@@ -127,4 +128,9 @@
   .cart-line__sum { grid-area: sum; }
   .cart-line > form:last-child { grid-area: del; }
   .steps li { font-size: 11px; }
+}
+@media (max-width: 420px) {
+  .steps { grid-template-columns: 1fr; gap: 8px; }
+  .steps li { text-align: left; font-size: 14px; padding: 4px 0 4px 40px; min-height: 28px; }
+  .steps li::before { left: 0; transform: none; }
 }

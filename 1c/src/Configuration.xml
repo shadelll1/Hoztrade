@@ -73,14 +73,19 @@
 			<CommonModule>хт_ОбменССайтом</CommonModule>
 			<CommonModule>хт_ОбменССайтомВызовСервера</CommonModule>
 			<CommonModule>хт_ДемоДанные</CommonModule>
+			<CommonModule>хт_ЗаказыССайта</CommonModule>
 			<CommonCommand>хт_ВыгрузитьКаталогНаСайт</CommonCommand>
 			<CommonCommand>хт_ПроверитьСвязьССайтом</CommonCommand>
 			<CommonCommand>хт_ЗаполнитьДемоКаталог</CommonCommand>
+			<CommonCommand>хт_ОбменССайтом</CommonCommand>
 			<Catalog>Номенклатура</Catalog>
 			<Catalog>ВидыЦен</Catalog>
 			<Catalog>СтруктурныеЕдиницы</Catalog>
 			<Catalog>хт_НастройкиОбменаССайтом</Catalog>
+			<Catalog>Лиды</Catalog>
+			<Document>ЗаказПокупателя</Document>
 			<InformationRegister>хт_ЖурналОбмена</InformationRegister>
+			<InformationRegister>хт_ОбъектыСайта</InformationRegister>
 		</ChildObjects>
 	</Configuration>
 </MetaDataObject>
