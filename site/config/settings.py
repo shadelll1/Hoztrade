@@ -96,6 +96,9 @@ STATIC_ROOT = BASE_DIR / "staticfiles"
 MEDIA_URL = "media/"
 MEDIA_ROOT = BASE_DIR / "media"
 
+# Резервные копии (manage.py backup): база и media
+BACKUP_DIR = env("BACKUP_DIR", default=str(BASE_DIR / "backups"))
+
 STORAGES = {
     "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
     "staticfiles": {"BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage"},

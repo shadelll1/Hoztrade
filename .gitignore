@@ -6,6 +6,8 @@ site/.env
 site/db.sqlite3
 site/media/
 site/staticfiles/
+site/backups/
+site/logs/
 
 # 1С
 *.log

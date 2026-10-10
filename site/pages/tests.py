@@ -81,3 +81,19 @@ def test_logging_to_file(tmp_path, monkeypatch):
     finally:
         monkeypatch.delenv("LOG_DIR")
         logging.config.dictConfig(importlib.reload(settings_module).LOGGING)
+
+
+@pytest.mark.django_db(transaction=True)
+def test_backup_sqlite_and_media(tmp_path, settings):
+    from django.db import connection
+    if connection.vendor != "sqlite":
+        pytest.skip("копия SQLite")
+    settings.BACKUP_DIR = str(tmp_path / "backups")
+    settings.MEDIA_ROOT = tmp_path / "media"
+    (tmp_path / "media" / "products").mkdir(parents=True)
+    (tmp_path / "media" / "products" / "a.webp").write_bytes(b"img")
+    for _ in range(3):
+        call_command("backup", "--keep", "2", stdout=io.StringIO())
+    copies = sorted((tmp_path / "backups").iterdir())
+    assert len(copies) == 2
+    assert (copies[-1] / "db.sqlite3").stat().st_size > 0 and (copies[-1] / "media.zip").exists()
