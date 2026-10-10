@@ -6,6 +6,8 @@
 """
 import uuid
 
+from .demo_data_extra import EXTRA
+
 NS = uuid.UUID("6f1d3a52-1c2b-4f0e-9a51-0d3c6b1e7a00")
 
 # Раздел -> подраздел -> товары: (название, артикул, ед., вес кг, объём м3, розница, опт, остаток)
@@ -134,6 +136,23 @@ CATALOG = {
         ],
     },
 }
+
+
+def _merge(base, extra):
+    """Базовый каталог + расширенный ассортимент. Новые разделы встают перед «Крепёж и инструмент»."""
+    merged = {}
+    for section, groups in base.items():
+        if section == "Крепёж и инструмент":
+            for new_section in extra:
+                if new_section not in base:
+                    merged[new_section] = {g: list(items) for g, items in extra[new_section].items()}
+        merged[section] = {g: list(items) for g, items in groups.items()}
+        for group, items in extra.get(section, {}).items():
+            merged[section].setdefault(group, []).extend(items)
+    return merged
+
+
+CATALOG = _merge(CATALOG, EXTRA)
 
 
 def _id(*parts):

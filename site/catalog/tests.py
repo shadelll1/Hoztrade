@@ -4,6 +4,7 @@ from decimal import Decimal
 import pytest
 from django.core.management import call_command
 
+from catalog.demo_data import CATALOG
 from catalog.models import Category, Product
 from catalog.templatetags.shop import plural, qty, rub, unit_count
 
@@ -39,7 +40,8 @@ class TestStorefront:
 
     def test_category_includes_nested_products(self, client, demo):
         r = client.get(Category.objects.get(name="Стройматериалы").get_absolute_url())
-        assert r.context["page"].paginator.count == 23
+        expected = sum(len(items) for items in CATALOG["Стройматериалы"].values())
+        assert r.context["page"].paginator.count == expected
 
     def test_filters_in_stock_and_price(self, client, demo):
         url = Category.objects.get(name="Стройматериалы").get_absolute_url()
@@ -51,7 +53,9 @@ class TestStorefront:
 
     def test_search_cyrillic_case_insensitive(self, client, demo):
         r = client.get("/search/", {"q": "ЦЕМЕНТ м500"})
-        assert [p.sku for p in r.context["page"].object_list] == ["ЦМ-500-50"]
+        found = r.context["page"].object_list
+        assert {"ЦМ-500-50", "ЦМ-500-25", "ЦМ-БЛ-25"} <= {p.sku for p in found}
+        assert all("цемент" in p.name.lower() and "м500" in p.name.lower() for p in found)
 
     def test_unpublished_is_404(self, client, demo):
         product = Product.objects.get(sku="ЦМ-500-50")
