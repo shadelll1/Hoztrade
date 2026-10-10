@@ -13,8 +13,16 @@
         </div>
       </fieldset>
       <label class="check"><input type="checkbox" name="in_stock" value="1" {% if filters.in_stock %}checked{% endif %}> Только в наличии</label>
+      {% if filters.brands|length > 1 or filters.brands.0.checked %}
+      <fieldset>
+        <legend>Бренд</legend>
+        <div class="brand-filter">
+          {% for b in filters.brands %}<label class="check"><input type="checkbox" name="brand" value="{{ b.slug }}" {% if b.checked %}checked{% endif %}> {{ b.name }} <span class="muted small">{{ b.count }}</span></label>{% endfor %}
+        </div>
+      </fieldset>
+      {% endif %}
       <button class="btn btn--primary btn--block" type="submit">Показать</button>
-      {% if filters.active %}<a class="link" href="{% url_with in_stock='' price_min='' price_max='' %}">Сбросить фильтры</a>{% endif %}
+      {% if filters.active %}<a class="link" href="{% url_with in_stock='' price_min='' price_max='' brand='' %}">Сбросить фильтры</a>{% endif %}
     </form>
   </details>
 

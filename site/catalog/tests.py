@@ -107,3 +107,28 @@ def test_tree_cache_invalidation(client, settings):
     category = Category.objects.get(ext_id=root)
     category.save()                                                          # сохранение — через сигнал
     assert [n.name for n in client.get("/").context["catalog_tree"]] == ["Кровля и водосток"]
+
+
+@pytest.mark.django_db
+class TestBrandFilterAndRating:
+    def test_brand_facet_and_filter(self, client, demo):
+        call_command("load_demo_content", stdout=io.StringIO())
+        url = Category.objects.get(name="Сухие смеси", parent__isnull=True).get_absolute_url()
+        facet = {b["name"]: b for b in client.get(url).context["filters"]["brands"]}
+        assert {"Knauf", "Волма", "Ceresit"} <= facet.keys()
+        r = client.get(url, {"brand": [facet["Knauf"]["slug"], facet["Волма"]["slug"]]})
+        brands = {p.brand.name for p in r.context["page"].object_list}
+        assert brands == {"Knauf", "Волма"}
+        assert r.context["page"].paginator.count == facet["Knauf"]["count"] + facet["Волма"]["count"]
+        assert r.context["filters"]["active"]
+
+    def test_rating_on_cards(self, client, demo):
+        from content.models import Review
+        product = Product.objects.get(sku="ЦМ-500-50")
+        Review.objects.create(product=product, name="a", rating=5, text="отлично", status="approved")
+        Review.objects.create(product=product, name="b", rating=4, text="хорошо", status="approved")
+        Review.objects.create(product=product, name="c", rating=1, text="спам спам", status="new")
+        r = client.get("/search/", {"q": "цемент м500 д0 50"})
+        card = next(p for p in r.context["page"].object_list if p.pk == product.pk)
+        assert card.reviews_n == 2 and card.rating == 4.5
+        assert "4,5" in r.content.decode()

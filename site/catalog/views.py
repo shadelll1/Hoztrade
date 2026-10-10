@@ -2,11 +2,11 @@ import math
 from decimal import Decimal, InvalidOperation
 
 from django.core.paginator import Paginator
-from django.db.models import Case, Count, IntegerField, Q, Value, When
+from django.db.models import Avg, Case, Count, IntegerField, Q, Value, When
 from django.shortcuts import get_object_or_404, render
 
 from content.forms import ReviewForm
-from content.models import Post
+from content.models import Post, Review
 from delivery.services import fleet
 
 from .models import Brand, Category, Product
@@ -51,10 +51,24 @@ def _filter_and_sort(request, qs):
     if state["price_max"] is not None:
         qs = qs.filter(price_retail__lte=state["price_max"])
 
+    # Бренды — из того, что осталось после остальных фильтров, с количеством товаров; выбранные отмечены.
+    chosen = set(request.GET.getlist("brand"))
+    state["brands"] = [
+        {"slug": row["brand__slug"], "name": row["brand__name"], "count": row["n"], "checked": row["brand__slug"] in chosen}
+        for row in qs.filter(brand__is_published=True).values("brand__slug", "brand__name")
+        .annotate(n=Count("pk")).order_by("brand__name")
+    ]
+    if chosen:
+        qs = qs.filter(brand__slug__in=chosen)
+
+    approved = Q(reviews__status=Review.Status.APPROVED)
+    qs = qs.annotate(rating=Avg("reviews__rating", filter=approved), reviews_n=Count("reviews", filter=approved))
+
     ordering = SORTS[state["sort"]][1]
     qs = _in_stock_first(qs) if ordering is None else qs.order_by(*ordering)
     state["sorts"] = [(key, label) for key, (label, _) in SORTS.items()]
-    state["active"] = state["in_stock"] or state["price_min"] is not None or state["price_max"] is not None
+    state["active"] = (state["in_stock"] or state["price_min"] is not None or state["price_max"] is not None
+                       or bool(chosen))
     return qs, state
 
 

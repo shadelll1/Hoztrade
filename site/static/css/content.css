@@ -42,6 +42,9 @@
 .stars { color: #e0a400; letter-spacing: 1px; }
 .pdp__meta { display: flex; flex-wrap: wrap; gap: 4px 16px; }
 .rating-link { color: inherit; text-decoration: none; }
+.card__rating { font-size: 14px; color: var(--text); text-decoration: none; }
+.card__rating:hover { color: var(--brand-dark); }
+.brand-filter { display: grid; gap: 6px; max-height: 240px; overflow: auto; }
 .rating-link:hover { color: var(--brand-dark); }
 .reviews__grid { display: grid; grid-template-columns: 1fr 380px; gap: 24px; align-items: start; }
 .reviews__list { display: grid; gap: 12px; }
