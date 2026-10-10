@@ -24,6 +24,7 @@
 				<xr:Item xsi:type="xr:MDObjectRef">Catalog.хт_НастройкиОбменаССайтом</xr:Item>
 				<xr:Item xsi:type="xr:MDObjectRef">InformationRegister.хт_ЖурналОбмена</xr:Item>
 				<xr:Item xsi:type="xr:MDObjectRef">CommonCommand.хт_ВыгрузитьКаталогНаСайт</xr:Item>
+				<xr:Item xsi:type="xr:MDObjectRef">CommonCommand.хт_ЗаполнитьДемоКаталог</xr:Item>
 			</Content>
 		</Properties>
 		<ChildObjects/>

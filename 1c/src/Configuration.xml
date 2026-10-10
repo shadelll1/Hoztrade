@@ -69,10 +69,13 @@
 			<Language>Русский</Language>
 			<Subsystem>хт_Сайт</Subsystem>
 			<Role>хт_ОсновнаяРоль</Role>
+			<CommonTemplate>хт_ДемоКаталог</CommonTemplate>
 			<CommonModule>хт_ОбменССайтом</CommonModule>
 			<CommonModule>хт_ОбменССайтомВызовСервера</CommonModule>
+			<CommonModule>хт_ДемоДанные</CommonModule>
 			<CommonCommand>хт_ВыгрузитьКаталогНаСайт</CommonCommand>
 			<CommonCommand>хт_ПроверитьСвязьССайтом</CommonCommand>
+			<CommonCommand>хт_ЗаполнитьДемоКаталог</CommonCommand>
 			<Catalog>Номенклатура</Catalog>
 			<Catalog>ВидыЦен</Catalog>
 			<Catalog>СтруктурныеЕдиницы</Catalog>
