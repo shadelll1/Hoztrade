@@ -9,6 +9,13 @@
   <link rel="stylesheet" href="{% static 'css/orders.css' %}">
   <link rel="stylesheet" href="{% static 'css/content.css' %}">
   <link rel="icon" href="{% static 'img/favicon.svg' %}" type="image/svg+xml">
+  <link rel="canonical" href="{{ request.scheme }}://{{ request.get_host }}{% block canonical %}{{ request.path }}{% if request.GET.page and request.GET.page != "1" %}?page={{ request.GET.page|urlencode }}{% endif %}{% endblock %}">
+  <meta property="og:site_name" content="{{ site.name }}">
+  <meta property="og:locale" content="ru_RU">
+  <meta property="og:type" content="{% block og_type %}website{% endblock %}">
+  <meta property="og:title" content="{% block og_title %}{{ site.name }} — строительные материалы в Чебоксарах{% endblock %}">
+  <meta property="og:url" content="{{ request.scheme }}://{{ request.get_host }}{{ request.path }}">
+  {% block og_image %}{% endblock %}
   {% block head %}{% endblock %}
 </head>
 <body>

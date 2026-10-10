@@ -33,10 +33,15 @@
       pick = trucks[trucks.length - 1];
       trips = Math.ceil(kg / pick.kg);
     }
-    result.innerHTML = "<b>" + rub(pick.price * trips) + "</b><span>" + pick.name +
-      (trips > 1 ? " × " + trips + " " + plural(trips, "рейс", "рейса", "рейсов") : "") + "</span>";
+    // Название машины приходит из 1С — только как текст, без разметки
+    var cost = document.createElement("b");
+    cost.textContent = rub(pick.price * trips);
+    var truck = document.createElement("span");
+    truck.textContent = pick.name + (trips > 1 ? " × " + trips + " " + plural(trips, "рейс", "рейса", "рейсов") : "");
+    result.replaceChildren(cost, truck);
   }
 
+  form.addEventListener("submit", function (e) { e.preventDefault(); calc(); });
   form.addEventListener("input", calc);
   form.addEventListener("change", calc);
   calc();

@@ -4,8 +4,22 @@
     {
       "name": "hoztrade-site",
       "runtimeExecutable": "C:/Dev/Hoztrade/site/.venv/Scripts/python.exe",
-      "runtimeArgs": ["C:/Dev/Hoztrade/site/manage.py", "runserver", "8000"],
+      "runtimeArgs": [
+        "C:/Dev/Hoztrade/site/manage.py",
+        "runserver",
+        "8000"
+      ],
       "port": 8000
+    },
+    {
+      "name": "hoztrade-prod",
+      "runtimeExecutable": "cmd",
+      "runtimeArgs": [
+        "/c",
+        "C:/Dev/Hoztrade/site/run-prod.bat",
+        "8001"
+      ],
+      "port": 8001
     }
   ]
 }

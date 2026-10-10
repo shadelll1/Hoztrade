@@ -132,3 +132,11 @@ class TestBrandFilterAndRating:
         card = next(p for p in r.context["page"].object_list if p.pk == product.pk)
         assert card.reviews_n == 2 and card.rating == 4.5
         assert "4,5" in r.content.decode()
+
+
+@pytest.mark.django_db
+def test_search_relevance(client, demo):
+    names = [p.name.lower() for p in client.get("/search/", {"q": "цемент"}).context["page"].object_list]
+    first_other = next(i for i, n in enumerate(names) if not n.startswith("цемент"))
+    assert all(n.startswith("цемент") for n in names[:first_other])
+    assert any("цементная" in n for n in names[first_other:])   # «гидроизоляция … цементная» — ниже

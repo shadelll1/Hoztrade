@@ -4,6 +4,9 @@
 {% block title %}{{ product.title }} — цена {{ product.price_retail|rub }} | {{ site.name }}{% endblock %}
 {% block description %}{{ product.title }}: {{ product.price_retail|rub }} за {{ product.unit }}. {% if product.in_stock %}В наличии в Чебоксарах{% else %}Под заказ{% endif %}, доставка грузотакси.{% endblock %}
 
+{% block og_type %}product{% endblock %}
+{% block og_title %}{{ product.title }} — {{ product.price_retail|rub }}{% endblock %}
+{% block og_image %}{% if product.image %}<meta property="og:image" content="{{ request.scheme }}://{{ request.get_host }}{{ product.image.url }}">{% endif %}{% endblock %}
 {% block head %}
 <script type="application/ld+json">
 {"@context":"https://schema.org","@type":"Product","name":"{{ product.title|escapejs }}","sku":"{{ product.sku|escapejs }}",

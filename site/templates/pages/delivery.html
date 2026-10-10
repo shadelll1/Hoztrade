@@ -28,7 +28,7 @@
 <p class="muted small">Цена — за один рейс машины до адреса. Разгрузка, подъём на этаж и доставка дальше 60 км — по договорённости.</p>
 
 <h2>Калькулятор</h2>
-<form class="calc" data-delivery-calc onsubmit="return false">
+<form class="calc" data-delivery-calc>
   <div class="field"><label for="calc-weight">Вес груза, кг</label><input id="calc-weight" type="number" min="1" step="1" value="500" inputmode="numeric"></div>
   <div class="field"><label for="calc-zone">Куда</label><select id="calc-zone">{% for zone, prices in rows %}<option value="{{ forloop.counter0 }}">{{ zone.name }}</option>{% endfor %}</select></div>
   <output class="calc__result" for="calc-weight calc-zone" data-calc-result aria-live="polite"></output>

@@ -36,8 +36,11 @@ def _decimal(value):
     return result if result >= 0 else None
 
 
-def _filter_and_sort(request, qs):
-    """Фильтры и сортировка из query string. Возвращает (queryset, состояние фильтров для шаблона)."""
+def _filter_and_sort(request, qs, relevance=None):
+    """Фильтры и сортировка из query string. Возвращает (queryset, состояние фильтров для шаблона).
+
+    relevance — выражение «чем меньше, тем выше» для поиска: при сортировке по умолчанию идёт первым ключом.
+    """
     state = {
         "in_stock": request.GET.get("in_stock") == "1",
         "price_min": _decimal(request.GET.get("price_min")),
@@ -65,7 +68,12 @@ def _filter_and_sort(request, qs):
     qs = qs.annotate(rating=Avg("reviews__rating", filter=approved), reviews_n=Count("reviews", filter=approved))
 
     ordering = SORTS[state["sort"]][1]
-    qs = _in_stock_first(qs) if ordering is None else qs.order_by(*ordering)
+    if ordering is None:
+        qs = _in_stock_first(qs)
+        if relevance is not None:
+            qs = qs.annotate(relevance=relevance).order_by("relevance", "out_of_stock", "name")
+    else:
+        qs = qs.order_by(*ordering)
     state["sorts"] = [(key, label) for key, (label, _) in SORTS.items()]
     state["active"] = (state["in_stock"] or state["price_min"] is not None or state["price_max"] is not None
                        or bool(chosen))
@@ -163,7 +171,17 @@ def search(request):
             qs = qs.filter(search_text__contains=term)
     else:
         qs = qs.none()
-    qs, filters = _filter_and_sort(request, qs)
+    relevance = None
+    if terms:
+        # Название начинается с запроса — выше всех; запрос с начала слова — ниже; вхождение в середину слова — в конце.
+        # search_text хранится в нижнем регистре: SQLite не умеет регистронезависимо сравнивать кириллицу.
+        first = terms[0]
+        relevance = Case(
+            When(search_text__startswith=first, then=Value(0)),
+            When(search_text__contains=" " + first, then=Value(1)),
+            default=Value(2), output_field=IntegerField(),
+        )
+    qs, filters = _filter_and_sort(request, qs, relevance)
     return render(request, "catalog/search.html", {
         "query": query,
         "page": _page(request, qs),
