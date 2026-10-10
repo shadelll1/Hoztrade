@@ -11,6 +11,8 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 env = environ.Env(
     DEBUG=(bool, False),
+    HTTPS=(bool, False),
+    SERVE_MEDIA=(bool, True),
     ALLOWED_HOSTS=(list, ["localhost", "127.0.0.1"]),
 )
 environ.Env.read_env(BASE_DIR / ".env")
@@ -135,8 +137,31 @@ DEFAULT_FROM_EMAIL = SERVER_EMAIL = env("DEFAULT_FROM_EMAIL", default="shop@loca
 FILE_UPLOAD_MAX_MEMORY_SIZE = 10 * 1024 * 1024
 DATA_UPLOAD_MAX_MEMORY_SIZE = 12 * 1024 * 1024
 
+# Фото товаров и файлы заявок. В режиме разработки их отдаёт runserver, в боевом на одном компьютере —
+# Django (SERVE_MEDIA=True); за nginx/CDN выключить и раздавать MEDIA_ROOT веб-сервером.
+SERVE_MEDIA = DEBUG or env("SERVE_MEDIA")
+
 if not DEBUG:
     SESSION_COOKIE_HTTPONLY = True
     CSRF_COOKIE_HTTPONLY = True
     SECURE_CONTENT_TYPE_NOSNIFF = True
+    SECURE_REFERRER_POLICY = "same-origin"
     X_FRAME_OPTIONS = "DENY"
+
+# HTTPS=True — сайт в интернете за TLS (напрямую или за обратным прокси).
+if env("HTTPS"):
+    SECURE_SSL_REDIRECT = True
+    SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+    SECURE_HSTS_SECONDS = env.int("SECURE_HSTS_SECONDS", default=3600)
+else:
+    # Локальный боевой режим (http://localhost) без TLS: проверки HTTPS в check --deploy к нему не относятся.
+    SILENCED_SYSTEM_CHECKS = ["security.W004", "security.W008", "security.W012", "security.W016"]
+
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "handlers": {"console": {"class": "logging.StreamHandler"}},
+    "root": {"handlers": ["console"], "level": "WARNING"},
+}

@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% block title %}Страница не найдена | {{ site.name }}{% endblock %}
+{% block head %}<meta name="robots" content="noindex">{% endblock %}
+{% block content %}
+<div class="wrap page page--narrow">
+  <div class="empty">
+    <b>Такой страницы нет</b>
+    <span>Возможно, товар сняли с продажи или ссылка устарела. Поищите в <a class="link" href="{% url 'catalog:root' %}">каталоге</a> или позвоните {{ site.phone }} — подберём замену.</span>
+  </div>
+</div>
+{% endblock %}

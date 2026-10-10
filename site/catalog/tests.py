@@ -61,3 +61,22 @@ class TestStorefront:
     def test_truck_capacity(self, client, demo):
         r = client.get(Product.objects.get(sku="ЦМ-500-50").get_absolute_url())
         assert dict(r.context["trucks"])[1.5] == 30
+
+
+@pytest.mark.django_db
+def test_sitemap_and_robots(client):
+    call_command("load_demo_catalog", stdout=io.StringIO())
+    r = client.get("/sitemap.xml")
+    assert r.status_code == 200
+    body = r.content.decode()
+    product = Product.objects.published().first()
+    assert product.get_absolute_url() in body and "/catalog/" in body
+    robots = client.get("/robots.txt").content.decode()
+    assert "Disallow: /checkout/" in robots and "Sitemap: http://testserver/sitemap.xml" in robots
+
+
+@pytest.mark.django_db
+def test_404_page(client, settings):
+    settings.DEBUG = False
+    r = client.get("/product/net-takogo/")
+    assert r.status_code == 404 and "Такой страницы нет" in r.content.decode()
