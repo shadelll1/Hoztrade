@@ -92,6 +92,10 @@
 			<Catalog>СлужбыДоставки</Catalog>
 			<Document>ЗаказПокупателя</Document>
 			<Document>МаршрутныйЛист</Document>
+			<Report>хт_ПродажиССайта</Report>
+			<Report>хт_ВоронкаЗаявок</Report>
+			<Report>хт_ЗагрузкаАвтопарка</Report>
+			<DataProcessor>хт_ПланированиеРейсов</DataProcessor>
 			<InformationRegister>хт_ЖурналОбмена</InformationRegister>
 			<InformationRegister>хт_ОбъектыСайта</InformationRegister>
 			<InformationRegister>хт_ТарифыДоставки</InformationRegister>

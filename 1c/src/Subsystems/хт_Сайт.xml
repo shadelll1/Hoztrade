@@ -16,7 +16,7 @@
 			<Explanation>
 				<v8:item>
 					<v8:lang>ru</v8:lang>
-					<v8:content>Обмен с интернет-магазином «Хозтрейд»: настройки, выгрузка каталога, журнал обмена</v8:content>
+					<v8:content>Интернет-магазин «Хозтрейд»: обмен с сайтом, доставка грузотакси, планирование рейсов, отчёты</v8:content>
 				</v8:item>
 			</Explanation>
 			<Picture/>
@@ -31,6 +31,10 @@
 				<xr:Item xsi:type="xr:MDObjectRef">Catalog.ЗоныТарифыДоставки</xr:Item>
 				<xr:Item xsi:type="xr:MDObjectRef">Catalog.ТранспортныеСредства</xr:Item>
 				<xr:Item xsi:type="xr:MDObjectRef">Document.МаршрутныйЛист</xr:Item>
+				<xr:Item xsi:type="xr:MDObjectRef">DataProcessor.хт_ПланированиеРейсов</xr:Item>
+				<xr:Item xsi:type="xr:MDObjectRef">Report.хт_ПродажиССайта</xr:Item>
+				<xr:Item xsi:type="xr:MDObjectRef">Report.хт_ВоронкаЗаявок</xr:Item>
+				<xr:Item xsi:type="xr:MDObjectRef">Report.хт_ЗагрузкаАвтопарка</xr:Item>
 			</Content>
 		</Properties>
 		<ChildObjects/>
