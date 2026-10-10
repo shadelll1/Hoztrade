@@ -185,3 +185,45 @@ class TestExchangeOrders:
         assert APIClient().get(leads[0]["file"]["url"].replace("http://testserver", "")).status_code == 401
         api.post("/api/v1/leads/ack/", {"leads": [{"id": leads[0]["id"], "ext_number": "000123"}]}, format="json")
         assert api.get("/api/v1/leads/new/").json()["leads"] == []
+
+
+@pytest.mark.django_db
+class TestCustomerEmails:
+    def order(self, client, **extra):
+        p = Product.objects.get(sku="ЦМ-500-50")
+        client.post(f"/cart/add/{p.pk}/", {"quantity": 2})
+        client.post("/checkout/", checkout_data(**extra))
+        return Order.objects.latest("pk")
+
+    def test_order_created_mail(self, client, demo, mailoutbox, settings):
+        settings.SITE_URL = "https://xn--e1aghgjeep2a.xn--p1ai"
+        order = self.order(client, email="ivan@example.com")
+        assert len(mailoutbox) == 1
+        mail = mailoutbox[0]
+        assert mail.to == ["ivan@example.com"] and order.number in mail.subject
+        assert f"https://xn--e1aghgjeep2a.xn--p1ai{order.get_absolute_url()}" in mail.body
+        assert "Цемент М500" in mail.body and "доставка 800" in mail.body
+
+    def test_no_email_no_mail(self, client, demo, mailoutbox):
+        self.order(client)
+        assert mailoutbox == []
+
+    def test_status_change_mail_once(self, client, api, demo, mailoutbox):
+        order = self.order(client, email="ivan@example.com")
+        mailoutbox.clear()
+
+        def status(value, text="В работе"):
+            api.post("/api/v1/orders/status/", {"orders": [{"id": order.pk, "status": value, "status_text": text,
+                                                             "total": 1788}]}, format="json")
+        status("confirmed")
+        status("confirmed", "Выполняется")    # статус тот же — письма нет
+        status("shipping", "На складе")
+        assert [m.subject for m in mailoutbox] == [f"Заказ {order.number}: подтверждён",
+                                                   f"Заказ {order.number}: передан в доставку"]
+        assert "1\xa0788" in mailoutbox[0].body and "водитель позвонит" in mailoutbox[1].body
+
+    def test_smtp_failure_does_not_break_checkout(self, client, demo, caplog):
+        from unittest import mock
+        with mock.patch("orders.emails.send_mail", side_effect=OSError("smtp down")):
+            order = self.order(client, email="ivan@example.com")
+        assert order.pk and "Не удалось отправить письмо" in caplog.text

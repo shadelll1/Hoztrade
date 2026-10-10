@@ -131,6 +131,12 @@ SITE_INFO = {
 }
 
 EMAIL_BACKEND = env("EMAIL_BACKEND", default="django.core.mail.backends.console.EmailBackend")
+# Почта одной строкой: EMAIL_URL=smtp+tls://user:password@smtp.yandex.ru:587 (включает SMTP-бэкенд)
+if env("EMAIL_URL", default=""):
+    vars().update(env.email_url("EMAIL_URL"))
+EMAIL_TIMEOUT = 10
+# Адрес сайта для ссылок в письмах (https://хозтрейд.рф); пусто — адрес из запроса
+SITE_URL = env("SITE_URL", default="")
 MANAGER_EMAILS = env.list("MANAGER_EMAILS", default=[])
 MANAGERS = [("Менеджер", e) for e in MANAGER_EMAILS]
 # Уведомления в Telegram (orders/notifications.py): оба значения пустые — выключено.

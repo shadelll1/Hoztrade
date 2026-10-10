@@ -1,0 +1,15 @@
+{% load shop %}{% autoescape off %}Здравствуйте, {{ order.name }}!
+
+Мы получили ваш заказ {{ order.number }} на сумму {{ order.grand_total|rub }}{% if order.delivery_cost is not None %} (товары {{ order.total|rub }}, доставка {{ order.delivery_cost|rub }}){% endif %}.
+
+{% for i in order.items.all %}— {{ i.name }}: {% unit_count i.quantity i.unit %} × {{ i.price|rub }} = {{ i.amount|rub }}
+{% endfor %}
+{% if order.delivery == "truck" %}Доставка{% if order.zone %} ({{ order.zone.name }}){% endif %}: {{ order.address }}{% if order.truck_name %}, {{ order.truck_name }}{% endif %}{% if order.delivery_date %}, {{ order.delivery_date|date:"j E" }}{% if order.delivery_interval %} {{ order.get_delivery_interval_display }}{% endif %}{% endif %}
+{% else %}Самовывоз: {{ order.pickup_store }}
+{% endif %}
+Менеджер перезвонит на {{ order.phone }}, подтвердит наличие и время. Статус заказа — по ссылке:
+{{ url }}
+
+{{ site.legal_name }}
+{{ site.phone }} · {{ site.email }}
+{% endautoescape %}

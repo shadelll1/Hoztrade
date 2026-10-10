@@ -11,6 +11,7 @@ from django.utils import timezone
 from rest_framework import serializers, status
 from rest_framework.response import Response
 
+from orders import emails
 from orders.models import Lead, Order
 
 from .views import ExchangeView
@@ -138,14 +139,23 @@ class OrdersStatusView(ExchangeView):
         s = StatusItem(data=request.data.get("orders", []), many=True)
         if not s.is_valid():
             return Response({"errors": s.errors}, status=status.HTTP_400_BAD_REQUEST)
+        orders = Order.objects.in_bulk([item["id"] for item in s.validated_data])
         updated = 0
         for item in s.validated_data:
-            fields = {"status": item["status"], "status_text": item["status_text"]}
+            order = orders.get(item["id"])
+            if order is None:
+                continue
+            status_changed = order.status != item["status"]
+            order.status = item["status"]
+            order.status_text = item["status_text"]
             if item["ext_number"]:
-                fields["ext_number"] = item["ext_number"]
+                order.ext_number = item["ext_number"]
             if item.get("total") is not None:
-                fields["total_1c"] = item["total"]
-            updated += Order.objects.filter(pk=item["id"]).update(**fields, updated_at=timezone.now())
+                order.total_1c = item["total"]
+            order.save(update_fields=["status", "status_text", "ext_number", "total_1c", "updated_at"])
+            updated += 1
+            if status_changed:
+                emails.status_changed(order, request)
         return Response({"updated": updated})
 
 

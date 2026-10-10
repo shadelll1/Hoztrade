@@ -1,0 +1,13 @@
+{% load shop %}{% autoescape off %}Здравствуйте, {{ order.name }}!
+
+Статус заказа {{ order.number }}: {{ order.get_status_display }}{% if order.status_text %} ({{ order.status_text }}){% endif %}.
+{% if order.status == "confirmed" and order.total_1c %}Сумма по счёту: {{ order.total_1c|rub }}{% if order.discount %}, скидка {{ order.discount|rub }}{% endif %}.
+{% elif order.status == "shipping" %}{% if order.delivery == "truck" %}Заказ передан в доставку — водитель позвонит перед приездом.{% else %}Заказ готов к выдаче: {{ order.pickup_store }}.{% endif %}
+{% elif order.status == "done" %}Спасибо за покупку! Будем рады отзыву о товарах на сайте.
+{% elif order.status == "canceled" %}Если заказ отменён по ошибке, позвоните нам: {{ site.phone }}.
+{% endif %}
+Подробности: {{ url }}
+
+{{ site.legal_name }}
+{{ site.phone }} · {{ site.email }}
+{% endautoescape %}

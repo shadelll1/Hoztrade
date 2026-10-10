@@ -11,6 +11,7 @@ from catalog.models import Product
 
 from .cart import Cart
 from .forms import CheckoutForm, LeadForm
+from . import emails
 from .models import Lead, Order, OrderItem
 from .notifications import notify
 
@@ -84,6 +85,7 @@ def checkout(request):
             return redirect("orders:checkout")
         order = _create_order(request, form, cart)
         cart.clear()
+        emails.order_created(order, request)
         _notify(f"Новый заказ {order.number} на {order.total} ₽",
                 f"{order.name}, {order.phone}\n{request.build_absolute_uri(reverse('admin:orders_order_change', args=[order.pk]))}")
         return redirect(order.get_absolute_url() + "?new=1")
