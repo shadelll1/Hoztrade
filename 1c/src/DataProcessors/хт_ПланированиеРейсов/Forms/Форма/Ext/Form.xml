@@ -48,6 +48,7 @@
 				<LabelField name="Сводка" id="10">
 					<DataPath>Сводка</DataPath>
 					<TitleLocation>None</TitleLocation>
+					<AutoMaxWidth>false</AutoMaxWidth>
 					<Height>2</Height>
 					<HorizontalStretch>true</HorizontalStretch>
 					<ContextMenu name="СводкаКонтекстноеМеню" id="11"/>
