@@ -1,0 +1,7 @@
+{% if form.non_field_errors %}<div class="alert alert--error">{{ form.non_field_errors|join:" " }}</div>{% endif %}
+<div class="fields fields--one">
+  {% for field in form.visible_fields %}{% if field.name != "website" and field.name != "consent" %}
+    {% include "orders/_field.html" with field=field %}
+    {% if field.help_text %}<p class="hint">{{ field.help_text|safe }}</p>{% endif %}
+  {% endif %}{% endfor %}
+</div>

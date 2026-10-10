@@ -40,6 +40,10 @@ class Order(ExchangeFields):
         PICKUP = "pickup", "Самовывоз"
         TRUCK = "truck", "Доставка грузотакси"
 
+    class PriceType(models.TextChoices):
+        RETAIL = "retail", "Розничные"
+        WHOLESALE = "wholesale", "Оптовые"
+
     token = models.UUIDField("Ключ доступа", default=uuid.uuid4, unique=True, editable=False)
     user = models.ForeignKey(settings.AUTH_USER_MODEL, verbose_name="Пользователь", null=True, blank=True,
                              on_delete=models.SET_NULL, related_name="orders")
@@ -60,6 +64,8 @@ class Order(ExchangeFields):
     delivery_date = models.DateField("Желаемая дата", null=True, blank=True)
     comment = models.TextField("Комментарий", blank=True)
 
+    # Оптовые — у подтверждённой компании; в 1С заказ получает оптовый вид цен из настройки обмена.
+    price_type = models.CharField("Цены", max_length=10, choices=PriceType.choices, default=PriceType.RETAIL)
     total = models.DecimalField("Сумма", max_digits=14, decimal_places=2, default=Decimal("0"))
     # Итог из 1С: учитывает скидки и акции, которые настроены в учётной системе, а не на сайте.
     total_1c = models.DecimalField("Сумма в 1С", max_digits=14, decimal_places=2, null=True, blank=True)

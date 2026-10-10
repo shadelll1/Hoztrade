@@ -13,11 +13,11 @@ class OrderItemInline(admin.TabularInline):
 
 @admin.register(Order)
 class OrderAdmin(admin.ModelAdmin):
-    list_display = ["number", "created_at", "name", "phone", "customer_type", "delivery", "total",
+    list_display = ["number", "created_at", "name", "phone", "customer_type", "price_type", "delivery", "total",
                     "status", "ext_number", "exported_at"]
-    list_filter = ["status", "delivery", "customer_type"]
+    list_filter = ["status", "delivery", "customer_type", "price_type"]
     search_fields = ["name", "phone", "email", "company", "inn", "ext_number"]
-    readonly_fields = ["token", "total", "total_1c", "weight_kg", "truck_t", "ext_id", "ext_number", "exported_at",
+    readonly_fields = ["token", "price_type", "total", "total_1c", "weight_kg", "truck_t", "ext_id", "ext_number", "exported_at",
                        "status_text", "created_at"]
     inlines = [OrderItemInline]
 

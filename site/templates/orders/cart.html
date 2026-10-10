@@ -19,7 +19,7 @@
           </a>
           <div class="cart-line__info">
             <a href="{{ p.get_absolute_url }}">{{ p.title }}</a>
-            <span class="muted">{{ p.price_retail|rub }} за {{ p.unit }}{% if p.weight_kg %} · {{ line.weight|qty }} кг{% endif %}</span>
+            <span class="muted">{{ line.price|rub }} за {{ p.unit }}{% if p.weight_kg %} · {{ line.weight|qty }} кг{% endif %}</span>
             {% if line.over_stock %}<span class="warn">На складе {% unit_count p.stock p.unit %} — остальное привезём под заказ</span>{% endif %}
           </div>
           <form class="cart-line__qty" method="post" action="{% url 'orders:cart_update' p.pk %}" data-autosubmit>
@@ -43,6 +43,7 @@
 
     <aside class="summary">
       <div class="summary__row"><span>Товары, {{ cart.lines|length }} поз.</span><b>{{ cart.total|rub }}</b></div>
+      {% if cart.wholesale %}<div class="b2b-note"><b>Оптовые цены</b><span>для {{ user.profile.company }}</span></div>{% endif %}
       <div class="summary__row"><span>Вес</span><span>{{ cart.weight|qty }} кг</span></div>
       <div class="summary__truck">
         {% if cart.truck %}

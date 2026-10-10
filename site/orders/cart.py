@@ -1,9 +1,11 @@
 """Корзина в сессии: {product_id: количество}. Цены и остатки всегда берутся из базы, не из сессии."""
 from dataclasses import dataclass
 from decimal import Decimal
+from functools import cached_property
 
 from django.conf import settings
 
+from accounts.models import is_wholesale
 from catalog.models import Product
 
 SESSION_KEY = "cart"
@@ -14,10 +16,15 @@ MAX_QTY = 100000
 class Line:
     product: Product
     quantity: int
+    wholesale: bool = False
+
+    @property
+    def price(self):
+        return self.product.price_for(self.wholesale)
 
     @property
     def amount(self):
-        return self.product.price_retail * self.quantity
+        return self.price * self.quantity
 
     @property
     def weight(self):
@@ -32,7 +39,13 @@ class Cart:
     def __init__(self, request):
         self.session = request.session
         self.data = self.session.get(SESSION_KEY) or {}
+        self.user = getattr(request, "user", None)
         self._lines = None
+
+    @cached_property
+    def wholesale(self):
+        """Подтверждённая компания покупает по оптовым ценам."""
+        return is_wholesale(self.user)
 
     def _save(self):
         self.session[SESSION_KEY] = self.data
@@ -65,7 +78,7 @@ class Cart:
         if self._lines is None:
             ids = [int(pk) for pk in self.data]
             products = Product.objects.published().filter(pk__in=ids, price_retail__gt=0).in_bulk()
-            self._lines = [Line(products[int(pk)], int(q)) for pk, q in self.data.items() if int(pk) in products]
+            self._lines = [Line(products[int(pk)], int(q), self.wholesale) for pk, q in self.data.items() if int(pk) in products]
         return self._lines
 
     def __len__(self):

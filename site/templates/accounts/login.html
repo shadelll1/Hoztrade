@@ -1,0 +1,13 @@
+{% extends "accounts/_auth.html" %}
+{% block title %}Вход | {{ site.name }}{% endblock %}
+{% block h1 %}Вход{% endblock %}
+{% block body %}
+<form method="post" class="panel" novalidate>
+  {% csrf_token %}
+  <input type="hidden" name="next" value="{{ next }}">
+  {% include "accounts/_form_fields.html" %}
+  <button class="btn btn--primary btn--lg btn--block" type="submit">Войти</button>
+  <p class="small"><a class="link" href="{% url 'accounts:password_reset' %}">Забыли пароль?</a></p>
+</form>
+<p class="auth__alt">Нет учётной записи? <a class="link" href="{% url 'accounts:register' %}{% if next %}?next={{ next|urlencode }}{% endif %}">Зарегистрируйтесь</a> — история заказов и оптовые цены для компаний.</p>
+{% endblock %}

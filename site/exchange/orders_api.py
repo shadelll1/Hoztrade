@@ -43,6 +43,7 @@ def order_to_json(order):
             "truck_t": _num(order.truck_t),
         },
         "comment": order.comment,
+        "price_type": order.price_type,
         "total": _num(order.total),
         "weight_kg": _num(order.weight_kg),
         "items": [

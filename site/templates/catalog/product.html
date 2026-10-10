@@ -32,8 +32,13 @@
 
       <div class="buybox">
         {% if product.can_buy %}
+          {% if is_wholesale and product.price_wholesale %}
+            <div class="buybox__price"><b>{{ product.price_wholesale|rub }}</b><span>за {{ product.unit }}</span></div>
+            <div class="buybox__b2b">Оптовая цена для {{ user.profile.company }}. Розница — <s>{{ product.price_retail|rub }}</s></div>
+          {% else %}
           <div class="buybox__price"><b>{{ product.price_retail|rub }}</b><span>за {{ product.unit }}</span></div>
-          {% if product.price_wholesale %}
+          {% endif %}
+          {% if product.price_wholesale and not is_wholesale %}
             <div class="buybox__b2b">Для юрлиц цена ниже — <a class="link" href="{% url 'pages:b2b' %}">как получить оптовые цены</a></div>
           {% endif %}
         {% else %}

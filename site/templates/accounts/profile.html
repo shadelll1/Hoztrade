@@ -1,0 +1,12 @@
+{% extends "accounts/_auth.html" %}
+{% block title %}Контакты | {{ site.name }}{% endblock %}
+{% block h1 %}Контакты{% endblock %}
+{% block body %}
+<form method="post" class="panel" novalidate>
+  {% csrf_token %}
+  {% include "accounts/_form_fields.html" %}
+  <p class="hint">Email ({{ user.email }}) — логин, его меняет менеджер.</p>
+  <button class="btn btn--primary btn--lg btn--block" type="submit">Сохранить</button>
+</form>
+<p class="auth__alt"><a class="link" href="{% url 'accounts:home' %}">← В личный кабинет</a></p>
+{% endblock %}

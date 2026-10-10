@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "hoztrade-site",
+      "runtimeExecutable": "C:/Dev/Hoztrade/site/.venv/Scripts/python.exe",
+      "runtimeArgs": ["C:/Dev/Hoztrade/site/manage.py", "runserver", "8000"],
+      "port": 8000
+    }
+  ]
+}

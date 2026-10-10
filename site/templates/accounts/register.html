@@ -1,0 +1,18 @@
+{% extends "accounts/_auth.html" %}
+{% block title %}Регистрация | {{ site.name }}{% endblock %}
+{% block h1 %}Регистрация{% endblock %}
+{% block body %}
+<form method="post" class="panel" novalidate>
+  {% csrf_token %}
+  <input type="hidden" name="next" value="{{ next }}">
+  {% include "accounts/_form_fields.html" %}
+  <div class="hp-wrap" aria-hidden="true">{{ form.website }}</div>
+  <label class="check consent{% if form.consent.errors %} field--error{% endif %}">
+    {{ form.consent }}
+    <span>Согласен на <a class="link" href="{% url 'pages:privacy' %}" target="_blank">обработку персональных данных</a></span>
+  </label>
+  {% for e in form.consent.errors %}<span class="field__error">{{ e }}</span>{% endfor %}
+  <button class="btn btn--primary btn--lg btn--block" type="submit">Зарегистрироваться</button>
+</form>
+<p class="auth__alt">Уже есть учётная запись? <a class="link" href="{% url 'accounts:login' %}">Войдите</a></p>
+{% endblock %}

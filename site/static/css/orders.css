@@ -134,3 +134,27 @@
   .steps li { text-align: left; font-size: 14px; padding: 4px 0 4px 40px; min-height: 28px; }
   .steps li::before { left: 0; transform: none; }
 }
+
+/* Личный кабинет */
+.auth { max-width: 480px; margin: 0 auto; }
+.auth .panel { gap: 16px; }
+.auth__alt { text-align: center; margin-top: 16px; }
+.fields--one { grid-template-columns: 1fr; }
+.account__head { display: flex; justify-content: space-between; align-items: center; gap: 16px; }
+.account { display: grid; grid-template-columns: 1fr 340px; gap: 24px; align-items: start; }
+.account__orders h2 { font-size: 20px; margin: 0 0 12px; }
+.account__side { display: grid; gap: 16px; }
+.account__side form { display: grid; gap: 12px; }
+.kv { display: grid; grid-template-columns: auto 1fr; gap: 6px 14px; margin: 0; font-size: 15px; }
+.kv dt { color: var(--muted); }
+.kv dd { margin: 0; overflow-wrap: anywhere; }
+.b2b-note { background: #e6eef8; color: #1e4f8a; border-radius: 10px; padding: 10px 14px; display: grid; gap: 2px; font-size: 14px; }
+.b2b-note b { font-size: 16px; }
+.b2b-note--wait { background: var(--accent-tint); color: #5b4300; }
+.status { font-weight: 600; }
+.status--done { color: var(--brand-dark); }
+.status--canceled { color: var(--danger); }
+button.link { background: none; border: 0; padding: 0; font: inherit; cursor: pointer; }
+@media (max-width: 900px) {
+  .account { grid-template-columns: 1fr; }
+}

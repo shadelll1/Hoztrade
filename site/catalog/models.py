@@ -125,3 +125,9 @@ class Product(models.Model):
     @property
     def can_buy(self):
         return self.price_retail > 0
+
+    def price_for(self, wholesale=False):
+        """Цена для покупателя: оптовая — подтверждённым компаниям, если она есть, иначе розничная."""
+        if wholesale and self.price_wholesale:
+            return self.price_wholesale
+        return self.price_retail

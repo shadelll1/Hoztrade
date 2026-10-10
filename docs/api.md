@@ -85,7 +85,7 @@
                "company": "ООО «СтройТест»", "inn": "2123456781"},
   "delivery": {"method": "truck", "store": "", "address": "Чебоксары, ул. Тестовая, 1",
                "date": null, "truck_t": 1.5},
-  "comment": "...", "total": 2015.0, "weight_kg": 200.0,
+  "comment": "...", "price_type": "retail", "total": 2015.0, "weight_kg": 200.0,
   "items": [{"product_id": "a9f3…", "sku": "ЦМ-500-50", "name": "Цемент М500 Д0 50 кг", "unit": "мешок",
              "quantity": 3.0, "price": 520.0, "amount": 1560.0}]
 }]}
@@ -93,6 +93,9 @@
 
 `customer.type`: `person` | `company`. `delivery.method`: `pickup` (тогда заполнен `store`) | `truck`.
 `product_id` — ID товара 1С из выгрузки каталога (`null`, если товар был заведён на сайте вручную).
+`price_type`: `retail` | `wholesale`. `wholesale` — заказ компании, которой менеджер открыл оптовые цены в личном
+кабинете сайта: цены строк — из `wholesale` выгрузки каталога, в 1С заказ получает оптовый вид цен из настройки обмена.
+Реквизиты такой компании (`company`, `inn`) берутся из её профиля на сайте, а не из формы заказа.
 
 ### POST /api/v1/orders/ack/
 

@@ -70,19 +70,38 @@ class CheckoutForm(AntiSpamMixin, forms.ModelForm):
             "address": forms.TextInput(attrs={"placeholder": "Город, улица, дом", "autocomplete": "street-address"}),
         }
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, user=None, **kwargs):
         super().__init__(*args, **kwargs)
         stores = [s["address"] for s in settings.SITE_INFO["stores"]]
         self.fields["store"].choices = [(s, s) for s in stores]
         self.fields["store"].initial = stores[0]
         self.fields["phone"].help_text = ""
 
+        # Вошедшему покупателю — контакты из профиля. Подтверждённая компания покупает только на себя:
+        # реквизиты берутся из профиля, а не из формы, иначе оптовые цены можно было бы отдать кому угодно.
+        self.wholesale_profile = None
+        profile = getattr(user, "profile", None) if user is not None and user.is_authenticated else None
+        if profile is not None:
+            self.initial.setdefault("name", user.get_full_name())
+            self.initial.setdefault("email", user.email)
+            self.initial.setdefault("phone", profile.phone)
+            if profile.is_wholesale:
+                self.wholesale_profile = profile
+                for name in ("customer_type", "company", "inn"):
+                    del self.fields[name]
+            elif profile.inn:
+                self.initial.setdefault("customer_type", Order.CustomerType.COMPANY)
+                self.initial.setdefault("company", profile.company)
+                self.initial.setdefault("inn", profile.inn)
+
     def clean_phone(self):
         return normalize_phone(self.cleaned_data["phone"])
 
     def clean(self):
         data = super().clean()
-        if data.get("customer_type") == Order.CustomerType.COMPANY:
+        if self.wholesale_profile is not None:
+            pass  # реквизиты компании подставляет оформление заказа из профиля
+        elif data.get("customer_type") == Order.CustomerType.COMPANY:
             if not data.get("company"):
                 self.add_error("company", "Укажите организацию")
             inn = (data.get("inn") or "").strip()

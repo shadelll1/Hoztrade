@@ -81,7 +81,7 @@ def checkout(request):
     if not cart.lines:
         return redirect("orders:cart")
 
-    form = CheckoutForm(request.POST or None)
+    form = CheckoutForm(request.POST or None, user=request.user)
     if request.method == "POST" and form.is_valid():
         if _throttled(request, "checkout"):
             messages.error(request, "Слишком много заказов подряд. Позвоните нам, пожалуйста.")
@@ -92,7 +92,8 @@ def checkout(request):
                 f"{order.name}, {order.phone}\n{request.build_absolute_uri(reverse('admin:orders_order_change', args=[order.pk]))}")
         return redirect(order.get_absolute_url() + "?new=1")
 
-    return render(request, "orders/checkout.html", {"cart": cart, "form": form})
+    return render(request, "orders/checkout.html", {"cart": cart, "form": form,
+                                                    "company_profile": form.wholesale_profile})
 
 
 @transaction.atomic
@@ -102,6 +103,12 @@ def _create_order(request, form, cart):
         order.pickup_store = form.cleaned_data.get("store") or ""
     if request.user.is_authenticated:
         order.user = request.user
+    profile = form.wholesale_profile
+    if profile is not None:
+        order.customer_type = Order.CustomerType.COMPANY
+        order.company = profile.company
+        order.inn = profile.inn
+    order.price_type = Order.PriceType.WHOLESALE if cart.wholesale else Order.PriceType.RETAIL
     order.total = cart.total
     order.weight_kg = cart.weight
     order.truck_t = cart.truck if order.delivery == Order.Delivery.TRUCK else None
@@ -109,7 +116,7 @@ def _create_order(request, form, cart):
     OrderItem.objects.bulk_create([
         OrderItem(
             order=order, product=line.product, product_ext_id=line.product.ext_id, sku=line.product.sku,
-            name=line.product.title, unit=line.product.unit, price=line.product.price_retail,
+            name=line.product.title, unit=line.product.unit, price=line.price,
             quantity=line.quantity, amount=line.amount,
         )
         for line in cart.lines

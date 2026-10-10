@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+{% load shop %}
+
+{% block title %}Личный кабинет | {{ site.name }}{% endblock %}
+{% block head %}<meta name="robots" content="noindex">{% endblock %}
+
+{% block content %}
+<div class="wrap page">
+  <div class="account__head">
+    <h1 class="page__title">Личный кабинет</h1>
+    <form method="post" action="{% url 'accounts:logout' %}">{% csrf_token %}<button class="btn btn--ghost" type="submit">Выйти</button></form>
+  </div>
+
+  <div class="account">
+    <section class="account__orders">
+      <h2>Мои заказы</h2>
+      {% if orders %}
+        <div class="table-wrap">
+          <table class="table">
+            <thead><tr><th>Заказ</th><th>Дата</th><th>Статус</th><th class="num">Сумма</th><th></th></tr></thead>
+            <tbody>
+              {% for o in orders %}
+                <tr>
+                  <td><a class="link" href="{{ o.get_absolute_url }}">{{ o.number }}</a>{% if o.ext_number %}<br><span class="muted small">в 1С {{ o.ext_number }}</span>{% endif %}</td>
+                  <td>{{ o.created_at|date:"j E Y" }}</td>
+                  <td><span class="status status--{{ o.status }}">{{ o.get_status_display }}</span>{% if o.status_text %}<br><span class="muted small">{{ o.status_text }}</span>{% endif %}</td>
+                  <td class="num">{{ o.total_1c|default:o.total|rub }}{% if o.price_type == 'wholesale' %}<br><span class="muted small">опт</span>{% endif %}</td>
+                  <td class="num">
+                    <form method="post" action="{% url 'accounts:repeat' o.token %}">{% csrf_token %}<button class="link" type="submit">Повторить</button></form>
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% else %}
+        <div class="empty">
+          <b>Заказов пока нет</b>
+          <span>Заказы, оформленные после входа, появятся здесь со статусом из учётной системы. <a class="link" href="{% url 'catalog:root' %}">В каталог</a></span>
+        </div>
+      {% endif %}
+    </section>
+
+    <aside class="account__side">
+      <section class="panel">
+        <h2>Контакты</h2>
+        <dl class="kv">
+          <dt>Имя</dt><dd>{{ user.first_name|default:"—" }}</dd>
+          <dt>Email</dt><dd>{{ user.email }}</dd>
+          <dt>Телефон</dt><dd>{{ profile.phone|default:"—" }}</dd>
+        </dl>
+        <p class="small"><a class="link" href="{% url 'accounts:profile' %}">Изменить</a> · <a class="link" href="{% url 'accounts:password_change' %}">Сменить пароль</a></p>
+      </section>
+
+      <section class="panel" id="b2b">
+        <h2>Оптовые цены</h2>
+        {% if profile.wholesale == "approved" %}
+          <div class="b2b-note"><b>{{ profile.company }}</b><span>ИНН {{ profile.inn }} · подтверждено</span></div>
+          <p class="small muted">В каталоге и корзине — оптовые цены. Заказы оформляются на компанию.</p>
+        {% elif profile.wholesale == "pending" %}
+          <div class="b2b-note b2b-note--wait"><b>{{ profile.company }}</b><span>ИНН {{ profile.inn }} · на проверке с {{ profile.wholesale_requested_at|date:"j E" }}</span></div>
+          <p class="small muted">Менеджер проверит компанию в рабочее время. Пока действуют розничные цены.</p>
+        {% else %}
+          {% if profile.wholesale == "rejected" %}
+            <div class="alert alert--error">Заявка отклонена{% if profile.wholesale_comment %}: {{ profile.wholesale_comment }}{% endif %}. Исправьте реквизиты и отправьте снова или позвоните {{ site.phone }}.</div>
+          {% else %}
+            <p class="small muted">Строительным компаниям, бригадам и ИП — оптовые цены после проверки менеджером.</p>
+          {% endif %}
+          <form method="post" action="{% url 'accounts:wholesale' %}" novalidate>
+            {% csrf_token %}
+            {% with form=wholesale_form %}{% include "accounts/_form_fields.html" %}{% endwith %}
+            <button class="btn btn--primary btn--block" type="submit">Запросить оптовые цены</button>
+          </form>
+        {% endif %}
+      </section>
+    </aside>
+  </div>
+</div>
+{% endblock %}

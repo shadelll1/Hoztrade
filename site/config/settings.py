@@ -32,6 +32,7 @@ INSTALLED_APPS = [
     "orders",
     "pages",
     "exchange",
+    "accounts",
 ]
 
 MIDDLEWARE = [
@@ -59,6 +60,7 @@ TEMPLATES = [
                 "django.contrib.messages.context_processors.messages",
                 "catalog.context_processors.shop",
                 "orders.context_processors.cart",
+                "accounts.context_processors.account",
             ],
         },
     },
@@ -95,6 +97,9 @@ STORAGES = {
 }
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+
+LOGIN_URL = "accounts:login"
+LOGIN_REDIRECT_URL = "accounts:home"
 
 REST_FRAMEWORK = {
     "DEFAULT_RENDERER_CLASSES": ["rest_framework.renderers.JSONRenderer"],

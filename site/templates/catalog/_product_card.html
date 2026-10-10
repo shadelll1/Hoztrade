@@ -6,7 +6,7 @@
   </a>
   <div class="card__body">
     <div class="card__price">
-      {% if p.can_buy %}<b>{{ p.price_retail|rub }}</b><span>/{{ p.unit }}</span>{% else %}<span class="muted">Цена по запросу</span>{% endif %}
+      {% if p.can_buy %}{% if is_wholesale and p.price_wholesale %}<b>{{ p.price_wholesale|rub }}</b><span>/{{ p.unit }}</span> <s class="muted small">{{ p.price_retail|rub }}</s>{% else %}<b>{{ p.price_retail|rub }}</b><span>/{{ p.unit }}</span>{% endif %}{% else %}<span class="muted">Цена по запросу</span>{% endif %}
     </div>
     <a class="card__name" href="{{ p.get_absolute_url }}">{{ p.title }}</a>
     {% if p.in_stock %}<div class="stock stock--yes">В наличии {% unit_count p.stock p.unit %}</div>
