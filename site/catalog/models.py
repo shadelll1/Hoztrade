@@ -1,0 +1,121 @@
+from decimal import Decimal
+
+from django.db import models
+from django.urls import reverse
+
+from .text import make_slug
+
+
+class Category(models.Model):
+    """Группа каталога. Приходит из 1С (группа справочника «Номенклатура»)."""
+
+    ext_id = models.UUIDField("ID в 1С", unique=True, null=True, blank=True)
+    parent = models.ForeignKey(
+        "self", verbose_name="Родитель", null=True, blank=True,
+        on_delete=models.SET_NULL, related_name="children",
+    )
+    name = models.CharField("Наименование", max_length=150)
+    slug = models.SlugField("Адрес", max_length=170, unique=True, allow_unicode=False)
+    sort = models.PositiveIntegerField("Порядок", default=500)
+    is_published = models.BooleanField("Опубликована", default=True)
+    updated_at = models.DateTimeField("Изменена", auto_now=True)
+
+    class Meta:
+        verbose_name = "Категория"
+        verbose_name_plural = "Категории"
+        ordering = ["sort", "name"]
+
+    def __str__(self):
+        return self.name
+
+    def save(self, *args, **kwargs):
+        if not self.slug:
+            self.slug = make_slug(self.name, Category, suffix=str(self.ext_id or "")[:8])
+        super().save(*args, **kwargs)
+
+    def get_absolute_url(self):
+        return reverse("catalog:category", args=[self.slug])
+
+    def ancestors(self):
+        """Цепочка родителей от корня — для хлебных крошек."""
+        chain, node = [], self.parent
+        while node is not None and node not in chain:
+            chain.insert(0, node)
+            node = node.parent
+        return chain
+
+    def descendant_ids(self):
+        """ID этой категории и всех вложенных (опубликованных)."""
+        ids, frontier = [self.pk], [self.pk]
+        while frontier:
+            frontier = list(
+                Category.objects.filter(parent_id__in=frontier, is_published=True)
+                .values_list("pk", flat=True)
+            )
+            ids.extend(frontier)
+        return ids
+
+
+class ProductQuerySet(models.QuerySet):
+    def published(self):
+        return self.filter(is_published=True)
+
+
+class Product(models.Model):
+    """Товар. Учётные поля (цены, остатки, вес) приходят из 1С, контентные (описание, фото) ведутся на сайте."""
+
+    ext_id = models.UUIDField("ID в 1С", unique=True, null=True, blank=True)
+    category = models.ForeignKey(
+        Category, verbose_name="Категория", null=True, blank=True,
+        on_delete=models.SET_NULL, related_name="products",
+    )
+    sku = models.CharField("Артикул", max_length=50, blank=True)
+    name = models.CharField("Наименование", max_length=150)
+    full_name = models.CharField("Полное наименование", max_length=500, blank=True)
+    slug = models.SlugField("Адрес", max_length=200, unique=True, allow_unicode=False)
+    unit = models.CharField("Единица", max_length=25, default="шт")
+    weight_kg = models.DecimalField("Вес, кг", max_digits=12, decimal_places=3, default=Decimal("0"))
+    volume_m3 = models.DecimalField("Объём, м³", max_digits=12, decimal_places=4, default=Decimal("0"))
+    price_retail = models.DecimalField("Цена", max_digits=14, decimal_places=2, default=Decimal("0"))
+    price_wholesale = models.DecimalField(
+        "Цена для юрлиц", max_digits=14, decimal_places=2, null=True, blank=True,
+    )
+    stock = models.DecimalField("Остаток", max_digits=14, decimal_places=3, default=Decimal("0"))
+
+    description = models.TextField("Описание", blank=True)
+    image = models.ImageField("Фото", upload_to="products/", blank=True)
+
+    is_published = models.BooleanField("Опубликован", default=True)
+    created_at = models.DateTimeField("Создан", auto_now_add=True)
+    updated_at = models.DateTimeField("Изменён", auto_now=True)
+
+    objects = ProductQuerySet.as_manager()
+
+    class Meta:
+        verbose_name = "Товар"
+        verbose_name_plural = "Товары"
+        ordering = ["name"]
+        indexes = [models.Index(fields=["is_published", "category"])]
+
+    def __str__(self):
+        return self.name
+
+    def save(self, *args, **kwargs):
+        if not self.slug:
+            self.slug = make_slug(self.name, Product, suffix=str(self.ext_id or "")[:8])
+        super().save(*args, **kwargs)
+
+    def get_absolute_url(self):
+        return reverse("catalog:product", args=[self.slug])
+
+    @property
+    def title(self):
+        return self.full_name or self.name
+
+    @property
+    def in_stock(self):
+        return self.stock > 0
+
+    @property
+    def can_buy(self):
+        return self.price_retail > 0

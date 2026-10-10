@@ -28,6 +28,8 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     "django.contrib.sitemaps",
     "rest_framework",
+    "catalog",
+    "exchange",
 ]
 
 MIDDLEWARE = [
@@ -89,6 +91,12 @@ STORAGES = {
 }
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+
+REST_FRAMEWORK = {
+    "DEFAULT_RENDERER_CLASSES": ["rest_framework.renderers.JSONRenderer"],
+    "DEFAULT_PARSER_CLASSES": ["rest_framework.parsers.JSONParser"],
+    "UNAUTHENTICATED_USER": None,
+}
 
 # Токен, с которым 1С обращается к API обмена
 EXCHANGE_TOKEN = env("EXCHANGE_TOKEN")
