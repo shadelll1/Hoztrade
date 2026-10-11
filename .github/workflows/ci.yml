@@ -1,0 +1,97 @@
+# Проверки при каждом push и pull request: сайт (линтер, тесты на SQLite и PostgreSQL, check --deploy),
+# кодировка исходников 1С, сборка Docker-образа и конфигурации боевого стенда.
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  site:
+    name: Сайт (${{ matrix.db }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        db: [sqlite, postgres]
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: hoztrade
+          POSTGRES_PASSWORD: hoztrade
+          POSTGRES_DB: hoztrade
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U hoztrade" --health-interval 5s --health-timeout 5s --health-retries 10
+    defaults:
+      run:
+        working-directory: site
+    env:
+      SECRET_KEY: ci-only-secret-key
+      EXCHANGE_TOKEN: ci-only-token
+      DATABASE_URL: ${{ matrix.db == 'postgres' && 'postgres://hoztrade:hoztrade@localhost:5432/hoztrade' || '' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: site/requirements*.txt
+      - run: pip install -r requirements-dev.txt
+      - name: Линтер
+        if: matrix.db == 'sqlite'
+        run: ruff check .
+      - name: Миграции без забытых изменений моделей
+        run: python manage.py makemigrations --check --dry-run
+      - name: Тесты
+        run: pytest -q
+      - name: Настройки боевого режима
+        env:
+          DEBUG: "False"
+          HTTPS: "True"
+          ALLOWED_HOSTS: xn--d1abfjwnnv.xn--p1ai
+          SECRET_KEY: ${{ github.run_id }}-${{ github.run_attempt }}-ci-deploy-check-long-random-secret-value-0123456789
+        run: python manage.py check --deploy --fail-level WARNING
+
+  onec:
+    name: Исходники 1С
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: UTF-8 с BOM и CRLF
+        run: python 1c/tools/check_encoding.py
+
+  deploy:
+    name: Docker и Caddy
+    runs-on: ubuntu-latest
+    env:
+      SITE_DOMAIN: xn--d1abfjwnnv.xn--p1ai
+      SECRET_KEY: ci
+      EXCHANGE_TOKEN: ci
+      POSTGRES_PASSWORD: ci
+    steps:
+      - uses: actions/checkout@v4
+      - name: Конфигурация docker compose
+        run: docker compose -f deploy/docker-compose.yml config --quiet
+      - name: Caddyfile
+        run: >-
+          docker run --rm -e SITE_DOMAIN -v "$PWD/deploy/Caddyfile:/etc/caddy/Caddyfile:ro" caddy:2-alpine
+          caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile
+      - name: Сборка образа
+        run: docker build -t hoztrade-site site
+      - name: Образ стартует и отвечает /healthz/
+        run: |
+          docker run -d --name site -p 8000:8000 -e SECRET_KEY -e EXCHANGE_TOKEN -e ALLOWED_HOSTS=localhost hoztrade-site
+          for i in $(seq 1 30); do
+            if curl -fsS http://localhost:8000/healthz/; then exit 0; fi
+            sleep 2
+          done
+          docker logs site
+          exit 1

@@ -1,5 +1,6 @@
 # Сайт «Хозтрейд» для Linux-сервера: gunicorn за обратным прокси (Caddy в deploy/docker-compose.yml).
-FROM python:3.12-slim
+# Debian trixie: его postgresql-client 17 снимает копии с PostgreSQL 16 из docker-compose (pg_dump не старше сервера)
+FROM python:3.12-slim-trixie
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
