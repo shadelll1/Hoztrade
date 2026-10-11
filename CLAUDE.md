@@ -126,3 +126,15 @@ docs\          API обмена (api.md), скриншоты
 - **Линтер:** `ruff check .` из `site/` (конфиг `site/ruff.toml`), исключения — точечные `# noqa: <код> — причина`.
 - **Дерево каталога кэшируется** (`catalog/tree.py`): массовые `update()` по группам/товарам вне импорта —
   вызывать `invalidate_tree()`, сигналы сохранения сбрасывают его сами.
+- **Кэш Django должен быть общим для процессов** (`CACHE_URL`): с кэшем в памяти и 3 воркерами gunicorn после
+  обмена с 1С каталог на боевом сервере был пустым — сброс версии дерева видел только один воркер. Локально
+  (runserver, waitress — один процесс) не воспроизводится. В compose — `filecache:///tmp/hoztrade-cache`.
+
+## Боевой сервер (2026-10-11)
+
+- Beget Cloud VPS `hoztrade`, `141.133.205.39`, Ubuntu 26.04, 2 ядра / 2 ГБ. Домен `добрострой23.рф`
+  (`xn--23-9kcl0a2abaqbkm.xn--p1ai`), DNS — в панели Beget (A-записи `@` и `www`).
+- Вход: `ssh -i ~/.ssh/hoztrade_vps root@141.133.205.39`; проект — `/opt/hoztrade`, настройки — `deploy/.env`
+  на сервере (в git нет). Обновление: `git archive HEAD deploy site docs | ssh … 'tar -x -C /opt/hoztrade'`,
+  затем `cd /opt/hoztrade/deploy && docker compose up -d --build`.
+- Токен обмена на сервере — тот же, что в `site/.env` (1С уже настроена на него); в 1С поменян только адрес.

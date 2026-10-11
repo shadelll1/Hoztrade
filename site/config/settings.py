@@ -89,6 +89,11 @@ DATABASES = {
     "default": env.db_url_config(env("DATABASE_URL", default="") or f"sqlite:///{BASE_DIR / 'db.sqlite3'}"),
 }
 
+# Кэш общий для всех процессов сайта: версия дерева каталога (catalog/tree.py) и защита от повторных заявок.
+# В памяти процесса (по умолчанию) — только для одного процесса (runserver, waitress); у gunicorn с несколькими
+# воркерами каждый видел бы свою версию дерева и пустой каталог после обмена. Docker: CACHE_URL=filecache:///…
+CACHES = {"default": env.cache_url_config(env("CACHE_URL", default="locmemcache://"))}
+
 AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"},
     {"NAME": "django.contrib.auth.password_validation.MinimumLengthValidator"},
