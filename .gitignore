@@ -19,3 +19,5 @@ _commit-message.txt
 
 # Боевой стенд
 deploy/.env
+site/.env.public
+deploy/windows/caddy.exe

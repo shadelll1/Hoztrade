@@ -3,6 +3,7 @@
 Всё, что отличается между разработкой и боевым режимом, берётся из переменных окружения
 или файла .env рядом с manage.py (образец — .env.example).
 """
+import os
 from pathlib import Path
 
 import environ
@@ -15,6 +16,10 @@ env = environ.Env(
     SERVE_MEDIA=(bool, True),
     ALLOWED_HOSTS=(list, ["localhost", "127.0.0.1"]),
 )
+# ENV_FILE — файл с настройками поверх .env (сайт в интернете с этого компьютера: run-public.bat → .env.public).
+# Кто прочитан первым, тот и прав: переменные окружения, затем ENV_FILE, затем .env.
+if os.environ.get("ENV_FILE"):
+    environ.Env.read_env(BASE_DIR / os.environ["ENV_FILE"])
 environ.Env.read_env(BASE_DIR / ".env")
 
 SECRET_KEY = env("SECRET_KEY")
@@ -171,7 +176,9 @@ if not DEBUG:
 # HTTPS=True — сайт в интернете за TLS (напрямую или за обратным прокси).
 if env("HTTPS"):
     SECURE_SSL_REDIRECT = True
-    SECURE_REDIRECT_EXEMPT = [r"^healthz/$"]
+    # API обмена — тоже: 1С на том же компьютере ходит прямо на http://localhost, минуя прокси. Снаружи
+    # сервер приложения не виден, а на порту 80 на HTTPS перенаправляет сам прокси.
+    SECURE_REDIRECT_EXEMPT = [r"^healthz/$", r"^api/"]
     SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True

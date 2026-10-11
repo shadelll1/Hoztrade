@@ -1,0 +1,17 @@
+# Caddy для Windows: сайт с этого компьютера (run-caddy.bat). Сертификат Let's Encrypt Caddy получает сам,
+# когда домен указывает на этот компьютер и снаружи открыты порты 80 и 443.
+# SITE_DOMAIN и MEDIA_DIR — из site\.env.public. Сайт (site\run-public.bat) — на 127.0.0.1:8000.
+{$SITE_DOMAIN} {
+	encode zstd gzip
+
+	# Как в deploy/Caddyfile: загрузки — с диска, файлы заявок (leads/) — персональные данные, 404.
+	handle_path /media/* {
+		@leads path /leads/*
+		respond @leads 404
+		root * {$MEDIA_DIR}
+		header Cache-Control "public, max-age=604800"
+		file_server
+	}
+
+	reverse_proxy 127.0.0.1:8000
+}

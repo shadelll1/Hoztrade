@@ -93,6 +93,21 @@ cd deploy && docker compose up -d --build     # миграции применя�
 `CSRF_TRUSTED_ORIGINS`, `SITE_URL`, `SERVE_MEDIA=True` (если прокси не раздаёт `media/products`, `brands`, `posts`
 сам; `media/leads` раздавать нельзя).
 
+### Сайт в интернете с этого компьютера (Caddy для Windows)
+
+Готовый вариант того же: `site\run-public.bat` + `deploy\windows\run-caddy.bat`.
+
+1. Нужны белый IP у провайдера, проброс портов 80 и 443 на роутере на этот компьютер, разрешение входящих
+   80/443 в брандмауэре Windows; VPN не должен перехватывать входящие соединения. Компьютер не засыпает.
+2. `site\.env.public` из `site\.env.public.example`: домен (punycode), почта. Остальное (`SECRET_KEY`, токен
+   обмена, база) берётся из `site\.env` — сайт работает с той же базой, что и при разработке.
+3. `caddy.exe` (сборка `windows_amd64` с github.com/caddyserver/caddy/releases) — в `deploy\windows\`.
+4. Запуск: `site\run-public.bat`, затем `deploy\windows\run-caddy.bat`. `run-dev.bat` при этом не запускать —
+   тот же порт 8000. 1С обменивается по-прежнему с `http://localhost:8000` (API не перенаправляется на HTTPS).
+5. A-запись домена — на внешний IP компьютера. Caddy получит сертификат при первом запросе.
+6. Перед открытием: администратор `manage.py createsuperuser`, демо-покупатели из
+   `load_demo_accounts` отключены (их пароль опубликован в README).
+
 ## Чек-лист перед запуском
 
 - [ ] Домен, сертификат, `https://<домен>/healthz/` отвечает `ok`
