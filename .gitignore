@@ -21,3 +21,4 @@ _commit-message.txt
 deploy/.env
 site/.env.public
 deploy/windows/caddy.exe
+1c/tools/.pexels-key

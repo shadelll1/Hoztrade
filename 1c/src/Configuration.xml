@@ -82,6 +82,7 @@
 			<CommonCommand>хт_ЗадатьТокенОбмена</CommonCommand>
 			<CommonCommand>хт_ЗаполнитьДемоКаталог</CommonCommand>
 			<CommonCommand>хт_ОбменССайтом</CommonCommand>
+			<CommonCommand>хт_ЗагрузитьКартинкиТоваров</CommonCommand>
 			<Catalog>Номенклатура</Catalog>
 			<Catalog>ВидыЦен</Catalog>
 			<Catalog>СтруктурныеЕдиницы</Catalog>

@@ -133,6 +133,13 @@
 		</right>
 	</object>
 	<object>
+		<name>CommonCommand.хт_ЗагрузитьКартинкиТоваров</name>
+		<right>
+			<name>View</name>
+			<value>true</value>
+		</right>
+	</object>
+	<object>
 		<name>CommonCommand.хт_ВыгрузитьКаталогНаСайт</name>
 		<right>
 			<name>View</name>
