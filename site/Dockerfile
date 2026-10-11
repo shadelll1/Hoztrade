@@ -20,8 +20,12 @@ RUN pip install -r requirements.txt
 COPY . .
 # Статика собирается в образ (whitenoise отдаёт её сам); секреты при сборке не нужны — подставляем заглушки
 RUN SECRET_KEY=build EXCHANGE_TOKEN=build python manage.py collectstatic --noinput \
-    && mkdir -p /app/media /app/logs /app/backups \
-    && chown -R app:app /app/media /app/logs /app/backups
+    && mkdir -p /app/media /app/logs /app/backups /app/data \
+    && chown -R app:app /app/media /app/logs /app/backups /app/data
+
+# Без DATABASE_URL (образ запущен без compose) — SQLite в папке, куда пользователь app может писать;
+# docker-compose подставляет PostgreSQL
+ENV DATABASE_URL=sqlite:////app/data/db.sqlite3
 
 USER app
 EXPOSE 8000
