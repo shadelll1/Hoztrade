@@ -79,9 +79,9 @@ TEMPLATES = [
 
 WSGI_APPLICATION = "config.wsgi.application"
 
-# SQLite по умолчанию; PostgreSQL — DATABASE_URL=postgres://user:pass@host:5432/db
+# SQLite по умолчанию (и при пустом DATABASE_URL); PostgreSQL — DATABASE_URL=postgres://user:pass@host:5432/db
 DATABASES = {
-    "default": env.db("DATABASE_URL", default=f"sqlite:///{BASE_DIR / 'db.sqlite3'}"),
+    "default": env.db_url_config(env("DATABASE_URL", default="") or f"sqlite:///{BASE_DIR / 'db.sqlite3'}"),
 }
 
 AUTH_PASSWORD_VALIDATORS = [
