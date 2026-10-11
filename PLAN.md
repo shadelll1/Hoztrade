@@ -133,7 +133,9 @@
 Docker Compose + Caddy (HTTPS), [docs/deploy.md](docs/deploy.md), линтер ruff, CI в GitHub Actions.
 Отзывы и рейтинг в листинге, фильтр по брендам — сделаны.
 
-Не проверено локально (нет Docker): сборка образа, compose и Caddyfile — их проверяет CI после push.
+CI (GitHub Actions) зелёный: тесты на SQLite и PostgreSQL 16, ruff, `check --deploy`, кодировка 1С, сборка
+образа и ответ `/healthz/` из контейнера, docker-compose и Caddyfile. Не проверено: настоящий сервер с доменом
+(получение сертификата Caddy, отправка писем через SMTP).
 
 ## Как продолжить
 
