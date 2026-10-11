@@ -155,6 +155,9 @@ EMAIL_BACKEND = env("EMAIL_BACKEND", default="django.core.mail.backends.console.
 # Почта одной строкой: EMAIL_URL=smtp+tls://user:password@smtp.yandex.ru:587 (включает SMTP-бэкенд)
 if env("EMAIL_URL", default=""):
     vars().update(env.email_url("EMAIL_URL"))
+# Пароль почты можно задать отдельно, как есть, — тогда в EMAIL_URL его нет и @ : / в нём кодировать не нужно
+if env("EMAIL_PASSWORD", default=""):
+    EMAIL_HOST_PASSWORD = env("EMAIL_PASSWORD")
 EMAIL_TIMEOUT = 10
 # Адрес сайта для ссылок в письмах (https://хозтрейд.рф); пусто — адрес из запроса
 SITE_URL = env("SITE_URL", default="")
