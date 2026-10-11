@@ -14,3 +14,8 @@
 
 	reverse_proxy web:8000
 }
+
+# www — на основной адрес (DNS-запись www тоже указывает на сервер; без неё Caddy просто не получит на неё сертификат)
+www.{$SITE_DOMAIN} {
+	redir https://{$SITE_DOMAIN}{uri} permanent
+}
