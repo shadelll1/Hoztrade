@@ -118,5 +118,11 @@ docs\          API обмена (api.md), скриншоты
 - **Боевой режим включает CSP** (`config/security.py`): никаких `style="…"`, `onclick=`/`onsubmit=` и встроенных
   `<script>` в шаблонах витрины — только классы и `static/js`. Тест `pages/tests.py` это проверяет. Проверять
   витрину под CSP — конфигурацией `hoztrade-prod` (run-prod на 8001), в режиме разработки заголовка нет.
+- **Файлы заявок (`media/leads/`) — персональные данные**: Django раздаёт только `products|brands|posts/`,
+  Caddy отвечает 404 на `/media/leads/`. Новую публичную папку media — вписать в оба места.
+- **Тесты на PostgreSQL без Docker:** пакет `pgserver` (встроенный PostgreSQL 16) в отдельном venv; ошибка
+  `invalid value for parameter "TimeZone": "UTC"` лечится копированием `tzdata/zoneinfo` в
+  `pgserver/.../share/postgresql/timezone`. Затем `DATABASE_URL=postgres://postgres:@127.0.0.1:<порт>/postgres`.
+- **Линтер:** `ruff check .` из `site/` (конфиг `site/ruff.toml`), исключения — точечные `# noqa: <код> — причина`.
 - **Дерево каталога кэшируется** (`catalog/tree.py`): массовые `update()` по группам/товарам вне импорта —
   вызывать `invalidate_tree()`, сигналы сохранения сбрасывают его сами.
