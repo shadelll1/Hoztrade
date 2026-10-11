@@ -32,8 +32,8 @@ def inn_is_valid(inn: str) -> bool:
         return False
     digits = [int(c) for c in inn]
 
-    def check(weights):
-        return sum(w * d for w, d in zip(weights, digits)) % 11 % 10
+    def check(weights):  # весов меньше, чем цифр: последние цифры — контрольные
+        return sum(w * d for w, d in zip(weights, digits, strict=False)) % 11 % 10
 
     if len(inn) == 10:
         return check([2, 4, 10, 3, 5, 9, 4, 6, 8]) == digits[9]
@@ -85,7 +85,7 @@ class CheckoutForm(AntiSpamMixin, forms.ModelForm):
         # Только зоны, куда есть тариф; если 1С ещё не прислала тарифы, стоимость назовёт менеджер.
         self.fields["zone"].queryset = Zone.objects.filter(is_active=True, tariffs__truck__is_active=True).distinct()
         self.fields["zone"].empty_label = None
-        self.fields["delivery_interval"].choices = [("", "Любое")] + list(Order.Interval.choices)
+        self.fields["delivery_interval"].choices = [("", "Любое"), *Order.Interval.choices]
         today = timezone.localdate()
         self.fields["delivery_date"].widget.attrs.update({
             "min": today.isoformat(), "max": (today + timedelta(days=MAX_DELIVERY_DAYS)).isoformat()})
@@ -152,7 +152,9 @@ class LeadForm(AntiSpamMixin, forms.ModelForm):
         fields = ["name", "phone", "email", "text", "attachment"]
         widgets = {
             "phone": forms.TextInput(attrs={"type": "tel", "placeholder": PHONE_HELP, "autocomplete": "tel"}),
-            "text": forms.Textarea(attrs={"rows": 4, "placeholder": "Например: цемент М500 — 20 мешков, газоблок D500 — 3 поддона"}),
+            "text": forms.Textarea(attrs={
+                "rows": 4, "placeholder": "Например: цемент М500 — 20 мешков, газоблок D500 — 3 поддона",
+            }),
         }
 
     def __init__(self, *args, kind=Lead.Kind.LIST, **kwargs):

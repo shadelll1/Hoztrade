@@ -13,7 +13,7 @@ from .models import Category
 
 
 class Node:
-    __slots__ = ("category", "children", "own_count", "count")
+    __slots__ = ("category", "children", "count", "own_count")
 
     def __init__(self, category):
         self.category = category

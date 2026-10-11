@@ -22,7 +22,7 @@ def notify(subject, body):
     if settings.MANAGERS:
         try:
             mail_managers(subject, body, fail_silently=False)
-        except Exception:  # noqa: BLE001 — любая ошибка SMTP
+        except Exception:  # любая ошибка SMTP
             log.exception("Не удалось отправить уведомление менеджерам")
     if settings.TELEGRAM_BOT_TOKEN and settings.TELEGRAM_CHAT_ID:
         thread = threading.Thread(target=send_telegram, args=(f"{subject}\n{body}",), daemon=True)
@@ -37,7 +37,7 @@ def send_telegram(text):
                        "disable_web_page_preview": True}).encode()
     request = urllib.request.Request(url, data=data, headers={"Content-Type": "application/json"})
     try:
-        with urllib.request.urlopen(request, timeout=TELEGRAM_TIMEOUT) as response:
+        with urllib.request.urlopen(request, timeout=TELEGRAM_TIMEOUT) as response:  # noqa: S310 — адрес https://api.telegram.org
             response.read()
-    except Exception:  # noqa: BLE001 — сеть, неверный токен, лимиты Telegram
+    except Exception:  # сеть, неверный токен, лимиты Telegram
         log.exception("Не удалось отправить уведомление в Telegram")

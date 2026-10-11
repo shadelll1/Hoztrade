@@ -101,8 +101,10 @@ def test_backup_sqlite_and_media(tmp_path, settings):
 
 def test_lead_files_not_public(client, settings, tmp_path, db):
     """Файлы заявок (сметы) не отдаются по прямой ссылке, фото товаров — отдаются."""
-    from django.urls import clear_url_caches
     import importlib
+
+    from django.urls import clear_url_caches
+
     import config.urls
 
     settings.MEDIA_ROOT = tmp_path

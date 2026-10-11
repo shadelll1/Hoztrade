@@ -3,10 +3,9 @@ from datetime import timedelta
 from django.conf import settings
 from django.db import connection
 from django.http import HttpResponse, JsonResponse
-from django.utils import timezone
-from django.views.decorators.cache import never_cache
 from django.urls import reverse
-from django.views.decorators.cache import cache_page
+from django.utils import timezone
+from django.views.decorators.cache import cache_page, never_cache
 
 from exchange.models import ExchangeContact
 

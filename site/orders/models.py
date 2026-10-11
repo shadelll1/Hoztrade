@@ -97,12 +97,12 @@ class Order(ExchangeFields):
     def __str__(self):
         return f"Заказ {self.number}"
 
+    def get_absolute_url(self):
+        return reverse("orders:detail", args=[self.token])
+
     @property
     def number(self):
         return f"Х-{self.pk:06d}" if self.pk else "Х-новый"
-
-    def get_absolute_url(self):
-        return reverse("orders:detail", args=[self.token])
 
     @property
     def grand_total(self):

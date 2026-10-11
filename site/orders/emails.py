@@ -35,7 +35,7 @@ def _send(order, subject, template, request=None):
     context = {"order": order, "url": _site_url(request) + order.get_absolute_url(), "site": settings.SITE_INFO}
     try:
         send_mail(subject, render_to_string(template, context), None, [recipient], fail_silently=False)
-    except Exception:  # noqa: BLE001 — любая ошибка SMTP
+    except Exception:  # любая ошибка SMTP
         log.exception("Не удалось отправить письмо покупателю по заказу %s", order.number)
         return False
     return True

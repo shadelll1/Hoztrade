@@ -59,7 +59,8 @@ def zones():
 def _tariffs():
     """Тарифы действующих машин: {id зоны: {id машины: цена}} — один запрос."""
     result = {}
-    for zone_id, truck_id, price in Tariff.objects.filter(truck__is_active=True).values_list("zone_id", "truck_id", "price"):
+    rows = Tariff.objects.filter(truck__is_active=True).values_list("zone_id", "truck_id", "price")
+    for zone_id, truck_id, price in rows:
         result.setdefault(zone_id, {})[truck_id] = price
     return result
 

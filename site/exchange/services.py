@@ -108,7 +108,7 @@ def _import_products(items, full):
         if changed:
             for f, v in values.items():
                 setattr(product, f, v)
-            product.save(update_fields=changed + ["updated_at"])
+            product.save(update_fields=[*changed, "updated_at"])
             stats["updated"] += 1
 
     if full:

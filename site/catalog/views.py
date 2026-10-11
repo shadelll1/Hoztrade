@@ -57,7 +57,8 @@ def _filter_and_sort(request, qs, relevance=None):
     # Бренды — из того, что осталось после остальных фильтров, с количеством товаров; выбранные отмечены.
     chosen = set(request.GET.getlist("brand"))
     state["brands"] = [
-        {"slug": row["brand__slug"], "name": row["brand__name"], "count": row["n"], "checked": row["brand__slug"] in chosen}
+        {"slug": row["brand__slug"], "name": row["brand__name"], "count": row["n"],
+         "checked": row["brand__slug"] in chosen}
         for row in qs.filter(brand__is_published=True).values("brand__slug", "brand__name")
         .annotate(n=Count("pk")).order_by("brand__name")
     ]
@@ -153,7 +154,7 @@ def product(request, slug):
     reviews = item.reviews.approved()
     return render(request, "catalog/product.html", {
         "product": item,
-        "breadcrumbs": (item.category.ancestors() + [item.category]) if item.category_id else [],
+        "breadcrumbs": [*item.category.ancestors(), item.category] if item.category_id else [],
         "related": related,
         "trucks": trucks,
         "reviews": reviews,

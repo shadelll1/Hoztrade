@@ -46,7 +46,7 @@ class Command(BaseCommand):
             cmd = ["pg_dump", "--format=custom", "--no-owner", f"--file={target / 'db.dump'}",
                    f"--host={db.get('HOST') or 'localhost'}", f"--port={db.get('PORT') or 5432}",
                    f"--username={db.get('USER')}", db["NAME"]]
-            subprocess.run(cmd, env=env, check=True)
+            subprocess.run(cmd, env=env, check=True)  # noqa: S603 — аргументы из настроек, не от пользователя
         else:
             raise CommandError(f"Резервная копия базы {connection.vendor} не поддерживается")
 
@@ -57,4 +57,5 @@ class Command(BaseCommand):
         for old in backups[:-keep] if keep > 0 else []:
             shutil.rmtree(old)
         size = sum(f.stat().st_size for f in target.rglob("*") if f.is_file())
-        self.stdout.write(self.style.SUCCESS(f"Копия: {target} ({size // 1024} КБ), хранится копий: {min(len(backups), keep)}"))
+        kept = min(len(backups), keep)
+        self.stdout.write(self.style.SUCCESS(f"Копия: {target} ({size // 1024} КБ), хранится копий: {kept}"))

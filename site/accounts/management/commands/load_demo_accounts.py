@@ -3,7 +3,7 @@ from django.core.management.base import BaseCommand
 
 from accounts.models import Profile
 
-DEMO_PASSWORD = "hoztrade-demo"
+DEMO_PASSWORD = "hoztrade-demo"  # noqa: S105 — демо-учётки для локальной проверки, не для боевого сайта
 
 # Покупатели для демонстрации: частное лицо и подтверждённая компания с оптовыми ценами.
 # ИНН выдуманный, но с верной контрольной суммой.

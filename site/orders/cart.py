@@ -83,7 +83,8 @@ class Cart:
         if self._lines is None:
             ids = [int(pk) for pk in self.data]
             products = Product.objects.published().filter(pk__in=ids, price_retail__gt=0).in_bulk()
-            self._lines = [Line(products[int(pk)], int(q), self.wholesale) for pk, q in self.data.items() if int(pk) in products]
+            self._lines = [Line(products[int(pk)], int(q), self.wholesale)
+                           for pk, q in self.data.items() if int(pk) in products]
         return self._lines
 
     def __len__(self):

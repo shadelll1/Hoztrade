@@ -89,7 +89,7 @@ class Brand(models.Model):
 
     def spellings(self):
         """Все написания бренда в нижнем регистре: название и варианты."""
-        names = [self.name] + [a for a in self.aliases.split(",")]
+        names = [self.name, *self.aliases.split(",")]
         return [n.strip().lower() for n in names if n.strip()]
 
 
@@ -153,7 +153,7 @@ class Product(models.Model):
             self.slug = make_slug(self.name, Product, suffix=str(self.ext_id or "")[:8])
         self.search_text = " ".join([self.name, self.full_name, self.sku]).lower()
         if kwargs.get("update_fields") is not None:
-            kwargs["update_fields"] = list(kwargs["update_fields"]) + ["search_text"]
+            kwargs["update_fields"] = [*kwargs["update_fields"], "search_text"]
         super().save(*args, **kwargs)
 
     def get_absolute_url(self):

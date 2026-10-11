@@ -1,4 +1,3 @@
-from django.conf import settings
 from django.contrib import messages
 from django.core.cache import cache
 from django.db import transaction
@@ -9,9 +8,9 @@ from django.views.decorators.http import require_POST
 
 from catalog.models import Product
 
+from . import emails
 from .cart import Cart
 from .forms import CheckoutForm, LeadForm
-from . import emails
 from .models import Lead, Order, OrderItem
 from .notifications import notify
 
@@ -86,8 +85,8 @@ def checkout(request):
         order = _create_order(request, form, cart)
         cart.clear()
         emails.order_created(order, request)
-        _notify(f"Новый заказ {order.number} на {order.total} ₽",
-                f"{order.name}, {order.phone}\n{request.build_absolute_uri(reverse('admin:orders_order_change', args=[order.pk]))}")
+        admin_url = request.build_absolute_uri(reverse("admin:orders_order_change", args=[order.pk]))
+        _notify(f"Новый заказ {order.number} на {order.total} ₽", f"{order.name}, {order.phone}\n{admin_url}")
         return redirect(order.get_absolute_url() + "?new=1")
 
     quotes = cart.delivery_quotes

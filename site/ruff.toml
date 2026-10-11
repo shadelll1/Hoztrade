@@ -1,0 +1,20 @@
+# Линтер сайта: ruff check . (из site/). Конфиг держим строгим к ошибкам, мягким к стилю.
+line-length = 120
+target-version = "py312"
+extend-exclude = ["migrations", ".venv", "staticfiles", "media"]
+
+[lint]
+select = ["E", "F", "W", "I", "B", "UP", "DJ", "S", "BLE", "C4", "SIM", "RUF"]
+ignore = [
+  "S101",    # assert в тестах
+  "S311",    # random не для криптографии
+  "RUF001", "RUF002", "RUF003",  # кириллица и типографика (× — « ») в строках и комментариях — норма для проекта
+  "DJ001",   # null=True у CharField не используем, правило шумит на blank-полях
+  "SIM108",  # тернарники не всегда читаемее
+  "RUF012",  # списки в атрибутах класса — идиома Django (admin, Meta)
+]
+
+[lint.per-file-ignores]
+"**/tests.py" = ["S105", "S106", "E501"]
+"conftest.py" = ["S105"]
+"catalog/templatetags/shop.py" = ["E501"]  # SVG-пути иконок одной строкой

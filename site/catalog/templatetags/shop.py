@@ -106,7 +106,7 @@ def category_icon(name, size=24):
     return format_html(
         '<svg class="icon" width="{0}" height="{0}" viewBox="0 0 24 24" fill="none" stroke="currentColor" '
         'stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{1}</svg>',
-        size, mark_safe(body),
+        size, mark_safe(body),  # noqa: S308 — константы _ICONS, не ввод пользователя
     )
 
 

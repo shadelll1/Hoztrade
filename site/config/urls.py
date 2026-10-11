@@ -28,4 +28,6 @@ urlpatterns = [
 # персональные данные: их отдаёт только API обмена по токену, по прямой ссылке — 404.
 PUBLIC_MEDIA = r"(?:products|brands|posts)/"
 if settings.SERVE_MEDIA:
-    urlpatterns.insert(0, re_path(rf"^media/(?P<path>{PUBLIC_MEDIA}.*)$", serve, {"document_root": settings.MEDIA_ROOT}))
+    urlpatterns.insert(
+        0, re_path(rf"^media/(?P<path>{PUBLIC_MEDIA}.*)$", serve, {"document_root": settings.MEDIA_ROOT}),
+    )

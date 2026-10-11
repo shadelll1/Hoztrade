@@ -31,7 +31,10 @@ def make_variants(data):
 
 
 def save_product_image(product, data, version=""):
-    """Сохраняет фото товара и миниатюру, удаляя прежние файлы. version — версия фото из 1С (пусто — загружено вручную)."""
+    """Сохраняет фото товара и миниатюру, удаляя прежние файлы.
+
+    version — версия фото из 1С (пусто — загружено вручную).
+    """
     full, thumb = make_variants(data)
     for field in (product.image, product.thumb):
         if field:
