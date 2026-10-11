@@ -99,7 +99,7 @@ def test_backup_sqlite_and_media(tmp_path, settings):
     assert (copies[-1] / "db.sqlite3").stat().st_size > 0 and (copies[-1] / "media.zip").exists()
 
 
-def test_lead_files_not_public(client, settings, tmp_path):
+def test_lead_files_not_public(client, settings, tmp_path, db):
     """Файлы заявок (сметы) не отдаются по прямой ссылке, фото товаров — отдаются."""
     from django.urls import clear_url_caches
     import importlib
