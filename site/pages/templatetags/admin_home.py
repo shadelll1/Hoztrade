@@ -78,6 +78,28 @@ def admin_dashboard(context):
     return tiles
 
 
+@register.simple_tag(takes_context=True)
+def admin_shortcuts(context):
+    """Частые действия одной кнопкой — только те, на которые у сотрудника есть права."""
+    user = context["request"].user
+    today = timezone.localdate()
+    links = []
+    if user.has_perm("orders.view_order"):
+        links.append({"label": "Заказы за сегодня", "url": reverse("admin:orders_order_changelist")
+                      + f"?created_at__day={today.day}&created_at__month={today.month}&created_at__year={today.year}"})
+    if user.has_perm("content.add_post"):
+        links.append({"label": "Добавить акцию или новость", "url": reverse("admin:content_post_add")})
+    if user.has_perm("content.view_review"):
+        links.append({"label": "Отзывы на модерации", "url": reverse("admin:content_review_changelist")
+                      + "?status__exact=new"})
+    if user.has_perm("catalog.view_product"):
+        links.append({"label": "Товары без фото", "url": reverse("admin:catalog_product_changelist")
+                      + "?image__exact="})
+    if user.is_superuser or user.has_perm("crm.use_crm"):
+        links.append({"label": "Открыть CRM", "url": reverse("crm:board"), "primary": True})
+    return links
+
+
 @register.simple_tag
 def admin_apps(app_list):
     """Разделы в рабочем порядке (заказы первыми) и число записей у каждой модели."""

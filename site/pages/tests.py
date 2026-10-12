@@ -1,4 +1,5 @@
 import io
+import re
 
 import pytest
 from django.core.management import call_command
@@ -153,3 +154,26 @@ def test_admin_home_dashboard_and_lists(client):
     assert Review.objects.count() == 0 and "все разобраны" in html
     for url in ("/admin/orders/order/", "/admin/crm/deal/", "/admin/accounts/profile/", "/admin/content/review/"):
         assert client.get(url).status_code == 200, url
+
+
+@pytest.mark.django_db
+def test_admin_shortcuts_titles_and_app_page(client):
+    """Быстрые действия открываются; заголовки — сами объекты; на странице раздела нет табло главной."""
+    from django.contrib.auth import get_user_model
+
+    from catalog.models import Product
+
+    admin_user = get_user_model().objects.create_superuser("boss2", "boss2@example.com", "pass")
+    client.force_login(admin_user)
+    home = client.get("/admin/").content.decode()
+    shortcuts = re.findall(r'href="([^"]+)"', home.split('class="ht-shortcuts"')[1].split("</ul>")[0])
+    assert len(shortcuts) == 5 and "Товары без фото" in home
+    for url in shortcuts:
+        assert client.get(url.replace("&amp;", "&")).status_code == 200, url
+    app_page = client.get("/admin/crm/").content.decode()
+    assert "ht-tablo" not in app_page and "Обращения" in app_page
+    product = Product.objects.create(name="Цемент М500", sku="ЦМ-1", slug="cement-1",
+                                     ext_id="00000000-0000-0000-0000-000000000001")
+    page = client.get(f"/admin/catalog/product/{product.pk}/change/").content.decode()
+    assert "<h1>Цемент М500</h1>" in page and "Из 1С" in page
+    assert "<h1>Товары</h1>" in client.get("/admin/catalog/product/").content.decode()

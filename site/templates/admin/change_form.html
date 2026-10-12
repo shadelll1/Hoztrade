@@ -1,0 +1,5 @@
+{% extends "admin/change_form.html" %}
+{% block title %}{% if original %}{{ original }}{% else %}{{ title }}{% endif %} | {{ site_title }}{% endblock %}
+{# Заголовок — сам объект («Заказ X-000009», «Цемент М500»): «Изменить заказ» ничего не сообщает #}
+{% block content_title %}{% if original %}<h1>{{ original }}{% if not has_change_permission %} <span class="ht-pill">только просмотр</span>{% endif %}</h1>{% else %}<h1>{{ title }}</h1>{% endif %}{% endblock %}
+{% block content_subtitle %}{% endblock %}
