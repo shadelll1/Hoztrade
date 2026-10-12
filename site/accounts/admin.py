@@ -1,6 +1,7 @@
 from django.contrib import admin, messages
 from django.contrib.auth import get_user_model
 from django.contrib.auth.admin import UserAdmin
+from django.utils.html import format_html
 
 from .models import Profile
 
@@ -9,13 +10,18 @@ from .models import Profile
 class ProfileAdmin(admin.ModelAdmin):
     """Корпоративные клиенты: менеджер проверяет компанию по ИНН и открывает оптовые цены."""
 
-    list_display = ["__str__", "email", "phone", "inn", "wholesale", "wholesale_requested_at"]
+    list_display = ["__str__", "email", "phone", "inn", "wholesale_badge", "wholesale_requested_at"]
     list_filter = ["wholesale"]
     search_fields = ["company", "inn", "phone", "user__email", "user__first_name"]
     readonly_fields = ["user", "wholesale_requested_at"]
     fields = ["user", "phone", "company", "inn", "wholesale", "wholesale_requested_at", "wholesale_comment"]
     actions = ["approve", "reject"]
     ordering = ["-wholesale_requested_at"]
+
+    @admin.display(description="Оптовые цены", ordering="wholesale")
+    def wholesale_badge(self, obj):
+        return format_html('<span class="ht-badge ht-badge--ws-{}">{}</span>', obj.wholesale,
+                           obj.get_wholesale_display())
 
     @admin.display(description="Email", ordering="user__email")
     def email(self, obj):

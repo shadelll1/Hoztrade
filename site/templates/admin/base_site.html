@@ -1,0 +1,41 @@
+{% extends "admin/base.html" %}
+{% load static i18n %}
+
+{% block title %}{% if subtitle %}{{ subtitle }} | {% endif %}{{ title }} | {{ site_title|default:_('Django site admin') }}{% endblock %}
+
+{# Свои стили — в extrahead: он идёт после extrastyle, куда страницы списков и форм добавляют стили Django #}
+{% block extrahead %}{{ block.super }}
+<link rel="preload" href="{% static 'fonts/onest-cyrillic.woff2' %}" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="{% static 'css/admin.css' %}">
+<link rel="icon" href="{% static 'img/favicon.svg' %}" type="image/svg+xml">
+{% endblock %}
+
+{% block branding %}
+<a class="ht-brand" href="{% url 'admin:index' %}">
+  <svg width="36" height="36" viewBox="0 0 40 40" aria-hidden="true">
+    <rect class="ht-brand__bg" width="40" height="40" rx="11"/>
+    <path class="ht-brand__line" d="M9 21 20 12l11 9" fill="none" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+    <path class="ht-brand__line" d="M13 19v10h14V19" fill="none" stroke-width="3" stroke-linejoin="round"/>
+    <rect class="ht-brand__door" x="17.5" y="23" width="5" height="6"/>
+  </svg>
+  <span><b>Хозтрейд</b><small>управление сайтом</small></span>
+</a>
+{% if user.is_anonymous %}
+  {% include "admin/color_theme_toggle.html" %}
+{% endif %}
+{% endblock %}
+
+{% block welcome-msg %}<span class="ht-me"><b>{% firstof user.get_short_name user.get_username %}</b></span>{% endblock %}
+
+{% block userlinks %}
+  {% if user.is_superuser or perms.crm.use_crm %}<a class="ht-link ht-link--crm" href="{% url 'crm:board' %}">CRM</a>{% endif %}
+  {% if site_url %}<a class="ht-link" href="{{ site_url }}">{% translate 'View site' %}</a>{% endif %}
+  {% if user.has_usable_password %}<a class="ht-link" href="{% url 'admin:password_change' %}">{% translate 'Change password' %}</a>{% endif %}
+  <form id="logout-form" method="post" action="{% url 'admin:logout' %}">
+    {% csrf_token %}
+    <button type="submit">{% translate 'Log out' %}</button>
+  </form>
+  {% include "admin/color_theme_toggle.html" %}
+{% endblock %}
+
+{% block nav-global %}{% endblock %}

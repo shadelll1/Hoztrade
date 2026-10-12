@@ -10,6 +10,7 @@ from pages.views import healthz, robots_txt
 
 admin.site.site_header = "Хозтрейд — управление сайтом"
 admin.site.site_title = "Хозтрейд"
+admin.site.enable_nav_sidebar = False   # разделы — на главной; ширина нужна таблицам
 
 urlpatterns = [
     path("sitemap.xml", cache_page(60 * 60)(sitemap), {"sitemaps": SITEMAPS}, name="sitemap"),

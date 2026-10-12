@@ -22,6 +22,7 @@ class ReviewAdmin(admin.ModelAdmin):
     """Модерация: новый отзыв не виден на сайте, пока его не опубликуют."""
 
     list_display = ["created_at", "product", "name", "stars", "short_text", "status"]
+    list_display_links = ["created_at", "short_text"]
     list_filter = ["status", "rating"]
     list_editable = ["status"]
     search_fields = ["name", "text", "product__name"]
@@ -31,7 +32,8 @@ class ReviewAdmin(admin.ModelAdmin):
 
     @admin.display(description="Оценка")
     def stars(self, obj):
-        return format_html('<span style="color:#e0a400">{}</span>', "★" * obj.rating + "☆" * (5 - obj.rating))
+        return format_html('<span class="ht-stars" title="{} из 5">{}</span>', obj.rating,
+                           "★" * obj.rating + "☆" * (5 - obj.rating))
 
     @admin.display(description="Отзыв")
     def short_text(self, obj):

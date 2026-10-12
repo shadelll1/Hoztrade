@@ -1,0 +1,64 @@
+{% extends "admin/index.html" %}
+{% load i18n admin_home %}
+
+{% block coltype %}colM{% endblock %}
+
+{% block content_title %}{% endblock %}
+
+{% block content %}
+<div id="content-main" class="ht-home">
+  {% admin_dashboard as tiles %}
+  {% if tiles %}
+  <section class="ht-tablo" aria-label="Что требует внимания">
+    {% for t in tiles %}
+      <a class="ht-tablo__cell{% if t.hot %} is-hot{% endif %}" href="{{ t.url }}">
+        <span class="ht-tablo__label">{{ t.label }}</span>
+        <b class="ht-tablo__num{% if t.text %} ht-tablo__num--text{% endif %}">{% if t.text %}{{ t.text }}{% else %}{{ t.num }}{% endif %}</b>
+        <span class="ht-tablo__note">{{ t.note }}</span>
+      </a>
+    {% endfor %}
+  </section>
+  {% endif %}
+
+  {% admin_apps app_list as apps %}
+  {% if apps %}
+  <div class="ht-apps">
+    {% for app in apps %}
+      <section class="ht-app app-{{ app.app_label }}" aria-labelledby="app-{{ app.app_label }}">
+        <h2 id="app-{{ app.app_label }}"><a href="{{ app.app_url }}">{{ app.name }}</a></h2>
+        <ul class="ht-app__models">
+          {% for model in app.models %}
+            <li>
+              {% if model.admin_url %}<a class="ht-app__model" href="{{ model.admin_url }}">{{ model.name }}</a>{% else %}<span class="ht-app__model">{{ model.name }}</span>{% endif %}
+              {% if model.count is not None %}<span class="ht-app__count">{{ model.count }}</span>{% endif %}
+              {% if model.add_url %}<a class="ht-app__add" href="{{ model.add_url }}" title="Добавить: {{ model.name|lower }}"><span aria-hidden="true">+</span><span class="visually-hidden">Добавить: {{ model.name|lower }}</span></a>{% endif %}
+            </li>
+          {% endfor %}
+        </ul>
+      </section>
+    {% endfor %}
+  </div>
+  {% else %}
+    <p>{% translate 'You don’t have permission to view or edit anything.' %}</p>
+  {% endif %}
+
+  {% load log %}
+  {% get_admin_log 8 as admin_log for_user user %}
+  {% if admin_log %}
+  <section class="ht-recent" aria-labelledby="recent-h">
+    <h2 id="recent-h">Мои последние изменения</h2>
+    <ul>
+      {% for entry in admin_log %}
+        <li class="ht-recent__{% if entry.is_addition %}add{% elif entry.is_change %}change{% else %}delete{% endif %}">
+          <span class="ht-recent__what">{% if entry.is_addition %}Добавлено{% elif entry.is_change %}Изменено{% else %}Удалено{% endif %}</span>
+          {% if entry.is_deletion or not entry.get_admin_url %}{{ entry.object_repr }}{% else %}<a href="{{ entry.get_admin_url }}">{{ entry.object_repr }}</a>{% endif %}
+          <span class="ht-recent__type">{% if entry.content_type %}{{ entry.content_type.name|capfirst }}{% endif %}, {{ entry.action_time|date:"j E, H:i" }}</span>
+        </li>
+      {% endfor %}
+    </ul>
+  </section>
+  {% endif %}
+</div>
+{% endblock %}
+
+{% block sidebar %}{% endblock %}

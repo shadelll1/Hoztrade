@@ -128,3 +128,28 @@ def test_healthz_exempt_from_https_redirect(client, settings, db):
     settings.SECURE_REDIRECT_EXEMPT = [r"^healthz/$"]
     assert client.get("/healthz/").status_code == 200
     assert client.get("/delivery/").status_code == 301
+
+
+@pytest.mark.django_db
+def test_admin_home_dashboard_and_lists(client):
+    """Главная админки: табло с тем, что ждёт действия, разделы с числами; списки со статусами открываются."""
+    from django.contrib.auth import get_user_model
+    from django.utils import timezone
+
+    from content.models import Review
+    from crm.models import Client, Deal
+    from exchange.models import ExchangeContact
+
+    admin_user = get_user_model().objects.create_superuser("boss", "boss@example.com", "pass")
+    c = Client.objects.create(name="Иван")
+    Deal.objects.create(client=c, title="Ждёт", created_at=timezone.now())
+    ExchangeContact.objects.create(last_seen_at=timezone.now())
+    client.force_login(admin_user)
+    r = client.get("/admin/")
+    html = r.content.decode()
+    assert r.status_code == 200 and "ht-tablo" in html and 'href="/crm/' in html
+    assert "Ждут ответа в CRM" in html and "Обмен с 1С" in html and "только что" in html
+    assert '<b class="ht-tablo__num">1</b>' in html   # одно обращение ждёт ответа
+    assert Review.objects.count() == 0 and "все разобраны" in html
+    for url in ("/admin/orders/order/", "/admin/crm/deal/", "/admin/accounts/profile/", "/admin/content/review/"):
+        assert client.get(url).status_code == 200, url
