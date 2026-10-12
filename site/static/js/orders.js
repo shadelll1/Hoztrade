@@ -11,31 +11,130 @@
     });
   }
 
-  // «В корзину» без перезагрузки: обновляем значки (шапка и нижняя панель) и кнопки формы.
-  // Кнопка может стоять вне формы (панель на телефоне, атрибут form) — берём все кнопки отправки формы.
   var badges = document.querySelectorAll("[data-cart-count]");
   var live = document.querySelector("[data-cart-live]");  // озвучка для экранного диктора
-  document.querySelectorAll("[data-add-to-cart]").forEach(function (form) {
-    form.addEventListener("submit", function (e) {
+  var MAX = 100000;
+
+  function plural(n, forms) {
+    var f = (forms || "шт,шт,шт").split(","), m10 = n % 10, m100 = n % 100;
+    if (m10 === 1 && m100 !== 11) return f[0];
+    if (m10 >= 2 && m10 <= 4 && (m100 < 12 || m100 > 14)) return f[1];
+    return f[2];
+  }
+
+  function updateBadges(count) {
+    badges.forEach(function (badge) {
+      badge.textContent = count;
+      badge.hidden = !count;
+      badge.classList.remove("bump"); void badge.offsetWidth; badge.classList.add("bump");
+    });
+  }
+
+  // Все блоки покупки одного товара на странице (карточка, страница товара, панель на телефоне) — в одно состояние
+  function sameProduct(box) {
+    return document.querySelectorAll('[data-buy][data-product="' + box.dataset.product + '"]');
+  }
+
+  function render(box, qty, bump) {
+    sameProduct(box).forEach(function (b) {
+      var field = b.querySelector("[data-buy-qty]");
+      b.classList.toggle("is-in-cart", qty > 0);
+      if (qty > 0 && field && Number(field.value) !== qty) field.value = qty;
+      if (bump) {
+        var q = b.querySelector(".qty");
+        if (q) { q.classList.remove("is-bumped"); void q.offsetWidth; q.classList.add("is-bumped"); }
+      }
+      b.dispatchEvent(new CustomEvent("buy:change", { bubbles: true, detail: { quantity: qty } }));
+    });
+  }
+
+  // Уведомление «Добавлено в корзину» — только при первом добавлении товара
+  var toast = document.querySelector("[data-added]");
+  var toastTimer;
+  function showToast(box) {
+    if (!toast) return;
+    var img = toast.querySelector("[data-added-img]");
+    img.hidden = !box.dataset.image;
+    if (box.dataset.image) img.src = box.dataset.image;
+    toast.querySelector("[data-added-name]").textContent = box.dataset.name || "";
+    clearTimeout(toastTimer);
+    toast.classList.remove("is-leaving");
+    toast.hidden = false;
+    toastTimer = setTimeout(function () {
+      toast.classList.add("is-leaving");
+      setTimeout(function () { toast.hidden = true; toast.classList.remove("is-leaving"); }, 250);
+    }, 3800);
+  }
+
+  function send(form, quantity) {
+    var body = new FormData(form);
+    if (quantity !== undefined) body.set("quantity", quantity);
+    return fetch(form.action, {
+      method: "POST", body: body, credentials: "same-origin", headers: { "X-Requested-With": "fetch" },
+    }).then(function (r) {
+      if (!r.ok) throw new Error(r.status);
+      return r.json();
+    });
+  }
+
+  function applied(box, data, verb) {
+    updateBadges(data.count);
+    render(box, data.quantity, true);
+    if (live) {
+      live.textContent = data.quantity
+        ? verb + " В корзине " + data.quantity + " " + plural(data.quantity, box.dataset.forms) + "."
+        : "Товар убран из корзины.";
+    }
+  }
+
+  document.querySelectorAll("[data-buy]").forEach(function (box) {
+    var add = box.querySelector("[data-buy-add]");
+    var set = box.querySelector("[data-buy-set]");
+    var field = box.querySelector("[data-buy-qty]");
+    var timer, pending;
+
+    // «В корзину»: добавить выбранное количество (в карточке — 1 штуку)
+    add.addEventListener("submit", function (e) {
       e.preventDefault();
-      var buttons = Array.prototype.slice.call(form.querySelectorAll("button[type=submit]"));
-      if (form.id) buttons = buttons.concat(Array.prototype.slice.call(document.querySelectorAll('button[form="' + form.id + '"]')));
-      buttons.forEach(function (btn) { btn.disabled = true; });
-      post(form).then(function (r) { return r.json(); }).then(function (data) {
-        badges.forEach(function (badge) {
-          badge.textContent = data.count;
-          badge.hidden = !data.count;
-          badge.classList.remove("bump"); void badge.offsetWidth; badge.classList.add("bump");
-        });
-        if (live) live.textContent = "Товар добавлен в корзину. Товаров в корзине: " + data.count;
-        buttons.forEach(function (btn) {
-          var label = btn.querySelector("[data-label]") || btn;
-          var text = label.textContent;
-          label.textContent = "В корзине ✓";
-          btn.classList.add("is-added");
-          setTimeout(function () { label.textContent = text; btn.classList.remove("is-added"); btn.disabled = false; }, 1400);
-        });
-      }).catch(function () { form.submit(); });
+      var amount = add.querySelector("[data-buy-amount]");
+      var n = Math.max(1, Math.min(MAX, parseInt(amount && amount.value, 10) || 1));
+      box.classList.add("is-busy");
+      send(add, n).then(function (data) {
+        applied(box, data, "Товар добавлен в корзину.");
+        showToast(box);
+        if (amount && amount.type === "number") amount.value = 1;
+        var next = box.querySelector("[data-buy-step='1']");
+        if (next && box.contains(document.activeElement)) next.focus();  // фокус не теряется при смене кнопки на счётчик
+      }).catch(function () { add.submit(); }).then(function () { box.classList.remove("is-busy"); });
+    });
+
+    // Счётчик: изменения копятся 350 мс и уходят одним запросом; 0 — товар убирается из корзины
+    function commit(n) {
+      n = Math.max(0, Math.min(MAX, n));
+      field.value = Math.max(n, 1);
+      render(box, n, true);
+      clearTimeout(timer);
+      pending = n;
+      timer = setTimeout(function () {
+        send(set, pending).then(function (data) { applied(box, data, "Количество изменено."); })
+          .catch(function () { set.submit(); });
+      }, 350);
+    }
+    box.querySelectorAll("[data-buy-step]").forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        commit((parseInt(field.value, 10) || 0) + Number(btn.dataset.buyStep));
+      });
+    });
+    field.addEventListener("change", function () { commit(parseInt(field.value, 10) || 0); });
+    set.addEventListener("submit", function (e) { e.preventDefault(); commit(parseInt(field.value, 10) || 0); });
+
+    // Калькулятор и другие блоки могут задать количество: «положить N в корзину»
+    box.addEventListener("buy:set", function (e) {
+      var n = e.detail.quantity;
+      if (box.classList.contains("is-in-cart")) { commit(n); return; }
+      var amount = add.querySelector("[data-buy-amount]");
+      if (amount) amount.value = n;
+      add.requestSubmit ? add.requestSubmit() : add.dispatchEvent(new Event("submit", { cancelable: true }));
     });
   });
 

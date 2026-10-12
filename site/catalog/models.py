@@ -3,6 +3,8 @@ from decimal import Decimal
 from django.db import models
 from django.urls import reverse
 
+from .attrs import labeled
+from .attrs import parse as parse_attrs
 from .text import make_slug
 
 
@@ -125,6 +127,8 @@ class Product(models.Model):
 
     # Нижний регистр названия и артикула: SQLite не умеет регистронезависимый поиск по кириллице.
     search_text = models.TextField(editable=False, blank=True, db_index=False)
+    # Свойства для фильтров и характеристик: {"pack": "25 кг", "thick": "8 мм"} — из наименования (catalog/attrs.py).
+    attrs = models.JSONField("Свойства", default=dict, blank=True, editable=False)
 
     description = models.TextField("Описание", blank=True)
     image = models.ImageField("Фото", upload_to="products/", blank=True)
@@ -152,8 +156,9 @@ class Product(models.Model):
         if not self.slug:
             self.slug = make_slug(self.name, Product, suffix=str(self.ext_id or "")[:8])
         self.search_text = " ".join([self.name, self.full_name, self.sku]).lower()
+        self.attrs = parse_attrs(self.title)
         if kwargs.get("update_fields") is not None:
-            kwargs["update_fields"] = [*kwargs["update_fields"], "search_text"]
+            kwargs["update_fields"] = [*kwargs["update_fields"], "search_text", "attrs"]
         super().save(*args, **kwargs)
 
     def get_absolute_url(self):
@@ -162,6 +167,11 @@ class Product(models.Model):
     @property
     def title(self):
         return self.full_name or self.name
+
+    @property
+    def attr_list(self):
+        """[(подпись, значение)] свойств — для таблицы характеристик."""
+        return labeled(self.attrs or {})
 
     @property
     def list_image(self):

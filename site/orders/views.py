@@ -4,6 +4,7 @@ from django.db import transaction
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
+from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.decorators.http import require_POST
 
 from catalog.models import Product
@@ -53,17 +54,31 @@ def cart_add(request, product_id):
     cart = Cart(request)
     cart.add(product, _qty(request.POST.get("quantity"), 1) or 1)
     if _wants_json(request):
-        return JsonResponse({"count": cart.count, "total": str(cart.total)})
+        return _cart_json(cart, product)
     messages.success(request, f"«{product.name}» в корзине")
-    return redirect(request.POST.get("next") or reverse("orders:cart"))
+    return redirect(_safe_next(request) or reverse("orders:cart"))
+
+
+def _cart_json(cart, product):
+    """Ответ для кнопок «В корзину» и счётчиков в карточках: сколько этого товара в корзине и итог."""
+    return JsonResponse({"count": cart.count, "total": str(cart.total), "quantity": cart.quantity(product)})
+
+
+def _safe_next(request):
+    """Адрес возврата из формы — только внутри сайта."""
+    target = request.POST.get("next") or ""
+    return target if url_has_allowed_host_and_scheme(target, allowed_hosts={request.get_host()}) else ""
 
 
 @require_POST
 def cart_update(request, product_id):
+    """Задать количество товара в корзине (0 — убрать). Из корзины и из счётчика в карточке товара."""
     product = get_object_or_404(Product, pk=product_id)
     cart = Cart(request)
     cart.set(product, _qty(request.POST.get("quantity"), 0))
-    return redirect("orders:cart")
+    if _wants_json(request):
+        return _cart_json(cart, product)
+    return redirect(_safe_next(request) or reverse("orders:cart"))
 
 
 @require_POST

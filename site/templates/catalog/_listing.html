@@ -2,7 +2,7 @@
 <div class="listing">
   <details class="filters" {% if filters.active %}open{% endif %} data-filters>
     <summary><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 6h16M7 12h10M10 18h4"/></svg> Фильтры{% if filters.active %} (включены){% endif %}</summary>
-    <form method="get" class="filters__form">
+    <form method="get" class="filters__form" data-filters-form>
       {% if query %}<input type="hidden" name="q" value="{{ query }}">{% endif %}
       <input type="hidden" name="sort" value="{{ filters.sort }}">
       <fieldset>
@@ -14,15 +14,23 @@
       </fieldset>
       <label class="switch"><input type="checkbox" name="in_stock" value="1" {% if filters.in_stock %}checked{% endif %}><span class="switch__ui" aria-hidden="true"></span> Только в наличии</label>
       {% if filters.brands|length > 1 or filters.brands.0.checked %}
-      <fieldset>
+      <fieldset class="facet">
         <legend>Бренд</legend>
-        <div class="brand-filter">
-          {% for b in filters.brands %}<label class="check"><input type="checkbox" name="brand" value="{{ b.slug }}" {% if b.checked %}checked{% endif %}> {{ b.name }} <span class="muted small">{{ b.count }}</span></label>{% endfor %}
+        <div class="facet__values">
+          {% for b in filters.brands %}<label class="pill"><input type="checkbox" name="brand" value="{{ b.slug }}" {% if b.checked %}checked{% endif %}><span>{{ b.name }}<small>{{ b.count }}</small></span></label>{% endfor %}
         </div>
       </fieldset>
       {% endif %}
-      <button class="btn btn--primary btn--block" type="submit">Показать</button>
-      {% if filters.active %}<a class="link" href="{% url_with in_stock='' price_min='' price_max='' brand='' %}">Сбросить фильтры</a>{% endif %}
+      {% for f in filters.facets %}
+      <fieldset class="facet">
+        <legend>{{ f.label }}</legend>
+        <div class="facet__values">
+          {% for v in f.values %}<label class="pill"><input type="checkbox" name="{{ f.param }}" value="{{ v.value }}" {% if v.checked %}checked{% endif %}><span>{{ v.value }}<small>{{ v.count }}</small></span></label>{% endfor %}
+        </div>
+      </fieldset>
+      {% endfor %}
+      <button class="btn btn--dark btn--block filters__apply" type="submit">Показать</button>
+      {% if filters.active %}<a class="link" href="{{ filters.reset_url }}">Сбросить фильтры</a>{% endif %}
     </form>
   </details>
 

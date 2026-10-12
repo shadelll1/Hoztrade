@@ -123,7 +123,7 @@
 
 /* Окно «Перезвоним вам» */
 .dialog { border: 0; border-radius: var(--radius); padding: 0; width: min(420px, calc(100vw - 32px)); box-shadow: 0 24px 60px rgba(0, 0, 0, .25); }
-.dialog::backdrop { background: rgba(15, 36, 25, .5); }
+.dialog::backdrop { background: rgba(14, 16, 19, .55); }
 .dialog__form { padding: 24px; display: grid; gap: 12px; position: relative; }
 .dialog__form h2, .dialog__form p { margin: 0; }
 .dialog__close { position: absolute; top: 10px; right: 10px; }

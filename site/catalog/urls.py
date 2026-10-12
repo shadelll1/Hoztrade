@@ -10,6 +10,7 @@ urlpatterns = [
     path("catalog/<slug:slug>/", views.category, name="category"),
     path("product/<slug:slug>/", views.product, name="product"),
     path("search/", views.search, name="search"),
+    path("search/suggest/", views.search_suggest, name="suggest"),
     path("brands/", views.brand_list, name="brands"),
     path("brands/<slug:slug>/", views.brand, name="brand"),
 ]

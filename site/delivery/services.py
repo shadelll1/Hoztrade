@@ -97,6 +97,17 @@ def quotes(weight_kg, volume_m3, trucks=None):
     return result
 
 
+def calc_data(table=None):
+    """Данные для расчёта доставки в браузере (static/js/delivery.js, страница товара):
+    машины по возрастанию и цены рейса по зонам (None — в зону эта машина не ездит)."""
+    trucks, rows = table or tariff_table()
+    return {
+        "trucks": [{"name": t.name, "kg": float(t.capacity_kg), "m3": float(t.volume_m3)} for t in trucks],
+        "zones": [{"id": z.pk, "name": z.name, "prices": [float(p) if p is not None else None for p in prices]}
+                  for z, prices in rows],
+    }
+
+
 def tariff_table():
     """Таблица тарифов для страницы «Доставка»: (машины, [(зона, [цена или None по машинам])])."""
     trucks = fleet()

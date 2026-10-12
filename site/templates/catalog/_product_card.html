@@ -1,6 +1,6 @@
 {% load shop %}
 <article class="card">
-  <a class="card__img" href="{{ p.get_absolute_url }}" tabindex="-1" aria-hidden="true">
+  <a class="card__img" href="{{ p.get_absolute_url }}" tabindex="-1" aria-hidden="true" data-photo-link>
     {% if p.image %}<img src="{{ p.list_image.url }}" alt="" loading="lazy" width="240" height="240">
     {% else %}{% root_of p.category as root %}<span class="ph">{% category_icon root.name 56 %}</span>{% endif %}
     {% if not p.in_stock %}<span class="card__flag">Под заказ</span>{% elif is_wholesale and p.price_wholesale %}<span class="card__flag card__flag--b2b">Опт</span>{% endif %}
@@ -17,20 +17,13 @@
         {% endif %}
       {% else %}<span class="muted">Цена по запросу</span>{% endif %}
     </div>
-    <a class="card__name" href="{{ p.get_absolute_url }}">{{ p.title }}</a>
+    <a class="card__name" href="{{ p.get_absolute_url }}" data-photo-link>{{ p.title }}</a>
     {% if p.reviews_n %}<a class="card__rating" href="{{ p.get_absolute_url }}#reviews" aria-label="Оценка {{ p.rating|floatformat:1 }} из 5, отзывов: {{ p.reviews_n }}"><span class="stars" aria-hidden="true">★</span> {{ p.rating|floatformat:1 }} <span class="muted">({{ p.reviews_n }} {{ p.reviews_n|plural:"отзыв,отзыва,отзывов" }})</span></a>{% endif %}
     {% if p.in_stock %}<div class="stock stock--yes">В наличии {% unit_count p.stock p.unit %}</div>
     {% else %}<div class="stock stock--no">Под заказ</div>{% endif %}
   </div>
-  {% if p.can_buy %}
-    <form class="card__btn" method="post" action="{% url 'orders:cart_add' p.pk %}" data-add-to-cart>
-      {% csrf_token %}<input type="hidden" name="next" value="{{ request.get_full_path }}">
-      <button class="btn btn--primary btn--block" type="submit">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M3 4h2l2.4 11h11L21 7H6.2"/><circle cx="9" cy="19.5" r="1.5"/><circle cx="17" cy="19.5" r="1.5"/></svg>
-        <span data-label>В корзину</span>
-      </button>
-    </form>
-  {% else %}
-    <a class="btn btn--ghost btn--block card__btn" href="{{ p.get_absolute_url }}">Подробнее</a>
-  {% endif %}
+  <div class="card__btn">
+    {% if p.can_buy %}{% include "catalog/_buy.html" with product=p big=False %}
+    {% else %}<a class="btn btn--ghost btn--block" href="{{ p.get_absolute_url }}">Подробнее</a>{% endif %}
+  </div>
 </article>

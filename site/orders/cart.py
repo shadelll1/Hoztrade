@@ -69,6 +69,13 @@ class Cart:
             self.data.pop(str(product.pk), None)
         self._save()
 
+    def quantity(self, product):
+        return int(self.data.get(str(product.pk), 0))
+
+    def quantities(self):
+        """{id товара: количество} — для счётчиков в карточках, без запроса к базе."""
+        return {int(pk): int(q) for pk, q in self.data.items()}
+
     def remove(self, product_id):
         self.data.pop(str(product_id), None)
         self._save()

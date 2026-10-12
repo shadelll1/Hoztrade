@@ -4,6 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#ffffff">
+  <meta name="color-scheme" content="light">
   <title>{% block title %}{{ site.name }} — строительные материалы в Чебоксарах{% endblock %}</title>
   <meta name="description" content="{% block description %}Стройматериалы, сухие смеси, сантехника, ламинат, поликарбонат и печное литьё в Чебоксарах. Доставка грузотакси от 1,5 до 20 тонн.{% endblock %}">
   <link rel="preload" href="{% static 'fonts/onest-cyrillic.woff2' %}" as="font" type="font/woff2" crossorigin>
@@ -45,10 +46,10 @@
   <div class="wrap header__in">
     <a class="logo" href="{% url 'catalog:home' %}" aria-label="{{ site.name }} — на главную">
       <svg class="logo__mark" width="42" height="42" viewBox="0 0 40 40" aria-hidden="true">
-        <rect width="40" height="40" rx="12" fill="var(--brand)"/>
-        <path d="M9 21 20 12l11 9" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
-        <path d="M13 19v10h14V19" fill="none" stroke="#fff" stroke-width="3" stroke-linejoin="round"/>
-        <rect x="17.5" y="23" width="5" height="6" fill="var(--accent)"/>
+        <rect class="logo__bg" width="40" height="40" rx="12"/>
+        <path class="logo__line" d="M9 21 20 12l11 9" fill="none" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+        <path class="logo__line" d="M13 19v10h14V19" fill="none" stroke-width="3" stroke-linejoin="round"/>
+        <rect class="logo__door" x="17.5" y="23" width="5" height="6"/>
       </svg>
       <span class="logo__text"><b>Хозтрейд</b><small>стройматериалы</small></span>
     </a>
@@ -58,10 +59,12 @@
       <span class="catalog-btn__text">Каталог</span>
     </button>
 
-    <form class="search" action="{% url 'catalog:search' %}" role="search">
+    <form class="search" action="{% url 'catalog:search' %}" role="search" data-suggest-form data-suggest-url="{% url 'catalog:suggest' %}">
       <svg class="search__icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
-      <input type="search" name="q" value="{{ query|default:'' }}" placeholder="Цемент, ламинат, поликарбонат…" aria-label="Поиск по каталогу" autocomplete="off">
+      <input type="search" name="q" value="{{ query|default:'' }}" placeholder="Цемент, ламинат, поликарбонат…" aria-label="Поиск по каталогу"
+             autocomplete="off" spellcheck="false" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="suggest" data-suggest-input>
       <button class="search__btn" type="submit">Найти</button>
+      <div class="suggest" id="suggest" role="listbox" aria-label="Подсказки поиска" hidden data-suggest></div>
     </form>
 
     <nav class="header__actions" aria-label="Быстрые действия">
@@ -148,10 +151,10 @@
     <div class="footer__brand">
       <a class="logo logo--light" href="{% url 'catalog:home' %}">
         <svg class="logo__mark" width="42" height="42" viewBox="0 0 40 40" aria-hidden="true">
-          <rect width="40" height="40" rx="12" fill="var(--brand)"/>
-          <path d="M9 21 20 12l11 9" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
-          <path d="M13 19v10h14V19" fill="none" stroke="#fff" stroke-width="3" stroke-linejoin="round"/>
-          <rect x="17.5" y="23" width="5" height="6" fill="var(--accent)"/>
+          <rect class="logo__bg" width="40" height="40" rx="12"/>
+          <path class="logo__line" d="M9 21 20 12l11 9" fill="none" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+          <path class="logo__line" d="M13 19v10h14V19" fill="none" stroke-width="3" stroke-linejoin="round"/>
+          <rect class="logo__door" x="17.5" y="23" width="5" height="6"/>
         </svg>
         <span class="logo__text"><b>Хозтрейд</b><small>стройматериалы в Чебоксарах</small></span>
       </a>
@@ -222,6 +225,11 @@
 </div>
 
 <p class="sr-only" aria-live="polite" data-cart-live></p>
+<div class="added" aria-hidden="true" data-added hidden>
+  <img class="added__img" src="data:," alt="" width="56" height="56" data-added-img>
+  <div class="added__text"><b>Добавлено в корзину</b><span data-added-name></span></div>
+  <a class="btn btn--dark added__go" href="{% url 'orders:cart' %}" tabindex="-1">В корзину</a>
+</div>
 
 <script src="{% static 'js/site.js' %}" defer></script>
 <script src="{% static 'js/orders.js' %}" defer></script>

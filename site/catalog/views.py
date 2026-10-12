@@ -1,15 +1,23 @@
 import math
 from decimal import Decimal, InvalidOperation
+from urllib.parse import urlencode
 
 from django.core.paginator import Paginator
 from django.db.models import Avg, Case, Count, IntegerField, Q, Value, When
+from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, render
+from django.urls import reverse
 
+from accounts.models import is_wholesale
 from content.forms import ReviewForm
 from content.models import Post, Review
-from delivery.services import fleet, fleet_with_prices
+from delivery.services import calc_data, fleet, fleet_with_prices
 
+from .attrs import LABELS, facets
+from .calc import calculator
+from .companions import companions
 from .models import Brand, Category, Product
+from .templatetags.shop import rub
 from .tree import cached_tree, find_node
 
 PER_PAGE = 24
@@ -65,6 +73,14 @@ def _filter_and_sort(request, qs, relevance=None):
     if chosen:
         qs = qs.filter(brand__slug__in=chosen)
 
+    # Свойства из наименований (фасовка, толщина, цвет…): ?f_pack=25 кг&f_pack=50 кг — «или» внутри свойства,
+    # «и» между свойствами. Счётчики — по товарам, прошедшим остальные фильтры.
+    picked = {key: set(request.GET.getlist(f"f_{key}")) for key in LABELS}
+    picked = {key: values for key, values in picked.items() if values}
+    state["facets"] = facets(list(qs.values_list("pk", "attrs")), picked)
+    for key, values in picked.items():
+        qs = qs.filter(**{f"attrs__{key}__in": sorted(values)})
+
     approved = Q(reviews__status=Review.Status.APPROVED)
     qs = qs.annotate(rating=Avg("reviews__rating", filter=approved), reviews_n=Count("reviews", filter=approved))
 
@@ -77,7 +93,10 @@ def _filter_and_sort(request, qs, relevance=None):
         qs = qs.order_by(*ordering)
     state["sorts"] = [(key, label) for key, (label, _) in SORTS.items()]
     state["active"] = (state["in_stock"] or state["price_min"] is not None or state["price_max"] is not None
-                       or bool(chosen))
+                       or bool(chosen) or bool(picked))
+    # «Сбросить фильтры» — оставляем только поиск и сортировку
+    keep = {k: request.GET[k] for k in ("q", "sort") if request.GET.get(k)}
+    state["reset_url"] = "?" + urlencode(keep) if keep else "?"
     return qs, state
 
 
@@ -186,10 +205,16 @@ def product(request, slug):
     saved = request.session.pop("review_form", None)
     review_form = ReviewForm(saved["data"]) if saved and saved.get("product") == item.pk else ReviewForm()
     reviews = item.reviews.approved()
+    delivery = None
+    if item.weight_kg > 0 and item.can_buy:
+        delivery = {**calc_data(), "product": {"kg": float(item.weight_kg), "m3": float(item.volume_m3)}}
     return render(request, "catalog/product.html", {
         "product": item,
         "breadcrumbs": [*item.category.ancestors(), item.category] if item.category_id else [],
         "related": related,
+        "companions": companions(item),
+        "calc": calculator(item) if item.can_buy else None,
+        "delivery": delivery if delivery and delivery["zones"] else None,
         "trucks": trucks,
         "reviews": reviews,
         "rating": item.reviews.summary(),
@@ -197,25 +222,66 @@ def product(request, slug):
     })
 
 
+def _search_terms(query):
+    return [t for t in query.lower().split() if len(t) >= 2]
+
+
+def _search_qs(terms):
+    """(товары по словам запроса, выражение релевантности или None)."""
+    qs = Product.objects.published().select_related("category")
+    if not terms:
+        return qs.none(), None
+    for term in terms:
+        qs = qs.filter(search_text__contains=term)
+    # Название начинается с запроса — выше всех; запрос с начала слова — ниже; вхождение в середину слова — в конце.
+    # search_text хранится в нижнем регистре: SQLite не умеет регистронезависимо сравнивать кириллицу.
+    first = terms[0]
+    relevance = Case(
+        When(search_text__startswith=first, then=Value(0)),
+        When(search_text__contains=" " + first, then=Value(1)),
+        default=Value(2), output_field=IntegerField(),
+    )
+    return qs, relevance
+
+
+def search_suggest(request):
+    """Подсказки под строкой поиска: разделы и товары. Пустой запрос — частые запросы."""
+    query = request.GET.get("q", "").strip()[:100]
+    terms = _search_terms(query)
+    if not terms:
+        return JsonResponse({"q": query, "popular": POPULAR_QUERIES, "categories": [], "products": [], "total": 0})
+    qs, relevance = _search_qs(terms)
+    total = qs.count()
+    products = qs.annotate(relevance=relevance).order_by("relevance", "-stock", "name")[:6]
+
+    # Разделы — по основе слова: «штукатурка» находит «Штукатурки», «смеситель» — «Смесители»
+    stems = [t[:max(4, len(t) - 2)] for t in terms]
+    categories = []
+    stack = list(cached_tree())
+    while stack:
+        node = stack.pop()
+        stack.extend(node.children)
+        words = node.name.lower().split()
+        if all(any(w.startswith(stem) for w in words) for stem in stems):
+            categories.append({"name": node.name, "url": node.get_absolute_url(), "count": node.count})
+    categories.sort(key=lambda c: -c["count"])
+
+    wholesale = is_wholesale(request.user)
+    return JsonResponse({
+        "q": query,
+        "total": total,
+        "all_url": f"{reverse('catalog:search')}?{urlencode({'q': query})}",
+        "categories": categories[:3],
+        "products": [{
+            "title": p.title, "url": p.get_absolute_url(), "price": rub(p.price_for(wholesale)) if p.can_buy else "",
+            "unit": p.unit, "image": p.list_image.url if p.list_image else "", "in_stock": p.in_stock,
+        } for p in products],
+    })
+
+
 def search(request):
     query = request.GET.get("q", "").strip()[:100]
-    terms = [t for t in query.lower().split() if len(t) >= 2]
-    qs = Product.objects.published().select_related("category")
-    if terms:
-        for term in terms:
-            qs = qs.filter(search_text__contains=term)
-    else:
-        qs = qs.none()
-    relevance = None
-    if terms:
-        # Название начинается с запроса — выше всех; запрос с начала слова — ниже; вхождение в середину слова — в конце.
-        # search_text хранится в нижнем регистре: SQLite не умеет регистронезависимо сравнивать кириллицу.
-        first = terms[0]
-        relevance = Case(
-            When(search_text__startswith=first, then=Value(0)),
-            When(search_text__contains=" " + first, then=Value(1)),
-            default=Value(2), output_field=IntegerField(),
-        )
+    qs, relevance = _search_qs(_search_terms(query))
     qs, filters = _filter_and_sort(request, qs, relevance)
     return render(request, "catalog/search.html", {
         "query": query,

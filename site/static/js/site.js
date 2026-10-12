@@ -99,6 +99,164 @@
     }).observe(buybox);
   }
 
+  // Подсказки поиска: разделы и товары по мере ввода. Шаблон ARIA combobox + listbox,
+  // стрелки выбирают вариант, Enter открывает его, Escape закрывает.
+  var sForm = document.querySelector("[data-suggest-form]");
+  if (sForm && window.fetch) {
+    var sInput = sForm.querySelector("[data-suggest-input]");
+    var sBox = sForm.querySelector("[data-suggest]");
+    var sTimer, sSeq = 0, sActive = -1, sCache = {};
+
+    var el = function (tag, cls, text) {
+      var n = document.createElement(tag);
+      if (cls) n.className = cls;
+      if (text !== undefined) n.textContent = text;
+      return n;
+    };
+    // Совпадение со словами запроса — жирным (только через textContent, разметку из ответа не вставляем)
+    var highlight = function (node, text, q) {
+      var words = q.toLowerCase().split(/\s+/).filter(function (w) { return w.length > 1; });
+      var low = text.toLowerCase(), i = 0;
+      while (i < text.length) {
+        var hit = -1, len = 0;
+        words.forEach(function (w) { var k = low.indexOf(w, i); if (k !== -1 && (hit === -1 || k < hit)) { hit = k; len = w.length; } });
+        if (hit === -1) { node.appendChild(document.createTextNode(text.slice(i))); break; }
+        if (hit > i) node.appendChild(document.createTextNode(text.slice(i, hit)));
+        node.appendChild(el("mark", "", text.slice(hit, hit + len)));
+        i = hit + len;
+      }
+    };
+    var options = function () { return sBox.querySelectorAll("[role=option]"); };
+    var setActive = function (i) {
+      var opts = options();
+      sActive = opts.length ? (i + opts.length) % opts.length : -1;
+      opts.forEach(function (o, k) { o.setAttribute("aria-selected", String(k === sActive)); });
+      if (sActive >= 0) {
+        sInput.setAttribute("aria-activedescendant", opts[sActive].id);
+        opts[sActive].scrollIntoView({ block: "nearest" });
+      } else sInput.removeAttribute("aria-activedescendant");
+    };
+    var close = function () {
+      sBox.hidden = true;
+      sInput.setAttribute("aria-expanded", "false");
+      sInput.removeAttribute("aria-activedescendant");
+      sActive = -1;
+    };
+    var option = function (href, cls, id) {
+      var a = el("a", "suggest__opt " + cls);
+      a.href = href; a.id = "sg-" + id; a.setAttribute("role", "option"); a.tabIndex = -1;
+      a.setAttribute("aria-selected", "false");
+      return a;
+    };
+    var draw = function (data) {
+      var q = sInput.value.trim(), n = 0;
+      sBox.replaceChildren();
+      if (data.popular) {
+        var g0 = el("div", "suggest__group"); g0.setAttribute("role", "group"); g0.setAttribute("aria-label", "Часто ищут");
+        g0.appendChild(el("div", "suggest__label", "Часто ищут"));
+        var chips = el("div", "suggest__chips");
+        data.popular.forEach(function (word) {
+          var a = option(sForm.action + "?q=" + encodeURIComponent(word), "suggest__opt--q", n++);
+          a.textContent = word;
+          chips.appendChild(a);
+        });
+        g0.appendChild(chips);
+        sBox.appendChild(g0);
+      }
+      if (data.categories && data.categories.length) {
+        var g1 = el("div", "suggest__group"); g1.setAttribute("role", "group"); g1.setAttribute("aria-label", "Разделы");
+        g1.appendChild(el("div", "suggest__label", "Разделы"));
+        data.categories.forEach(function (c) {
+          var a = option(c.url, "suggest__opt--cat", n++);
+          a.appendChild(el("span", "suggest__meta", "▦"));
+          var name = el("span", "suggest__name"); highlight(name, c.name, q); a.appendChild(name);
+          a.appendChild(el("span", "suggest__meta", c.count + " шт."));
+          g1.appendChild(a);
+        });
+        sBox.appendChild(g1);
+      }
+      if (data.products && data.products.length) {
+        var g2 = el("div", "suggest__group"); g2.setAttribute("role", "group"); g2.setAttribute("aria-label", "Товары");
+        g2.appendChild(el("div", "suggest__label", "Товары"));
+        data.products.forEach(function (p) {
+          var a = option(p.url, "", n++);
+          var img = el("img", "suggest__img"); img.alt = ""; img.width = 44; img.height = 44;
+          if (p.image) img.src = p.image; else img.removeAttribute("src");
+          a.appendChild(img);
+          var name = el("span", "suggest__name"); highlight(name, p.title, q); a.appendChild(name);
+          a.appendChild(el("span", "suggest__price", p.price ? p.price + "/" + p.unit : ""));
+          g2.appendChild(a);
+        });
+        sBox.appendChild(g2);
+      }
+      if (q && data.total > 0) {
+        var all = option(data.all_url, "suggest__all", n++);
+        all.className = "suggest__all";
+        all.textContent = "Все результаты: " + data.total;
+        sBox.appendChild(all);
+      } else if (q && !data.total) {
+        sBox.appendChild(el("p", "suggest__empty", "Ничего не нашлось. Попробуйте другое слово или позвоните — подберём под заказ."));
+      }
+      sBox.hidden = !sBox.childNodes.length;
+      sInput.setAttribute("aria-expanded", String(!sBox.hidden));
+      sActive = -1;
+    };
+    var load = function () {
+      var q = sInput.value.trim();
+      var key = q.toLowerCase();
+      if (sCache[key]) { draw(sCache[key]); return; }
+      var seq = ++sSeq;
+      fetch(sForm.dataset.suggestUrl + "?q=" + encodeURIComponent(q), { headers: { "X-Requested-With": "fetch" } })
+        .then(function (r) { return r.json(); })
+        .then(function (data) {
+          sCache[key] = data;
+          if (seq === sSeq && document.activeElement === sInput) draw(data);  // ответы старых запросов не рисуем
+        }).catch(function () { /* без подсказок поиск работает как раньше */ });
+    };
+    sInput.addEventListener("input", function () { clearTimeout(sTimer); sTimer = setTimeout(load, 140); });
+    sInput.addEventListener("focus", load);
+    sInput.addEventListener("keydown", function (e) {
+      if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+        if (sBox.hidden) { load(); return; }
+        e.preventDefault();
+        setActive(sActive + (e.key === "ArrowDown" ? 1 : -1));
+      } else if (e.key === "Enter" && sActive >= 0 && !sBox.hidden) {
+        e.preventDefault();
+        options()[sActive].click();
+      } else if (e.key === "Escape" && !sBox.hidden) {
+        e.stopPropagation();
+        close();
+      }
+    });
+    document.addEventListener("click", function (e) { if (!sForm.contains(e.target)) close(); });
+    sForm.addEventListener("focusout", function (e) { if (!sForm.contains(e.relatedTarget)) setTimeout(close, 120); });
+  }
+
+  // Фильтры применяются сразу при выборе (кнопка «Показать» остаётся для ввода цены и без JS)
+  var fForm = document.querySelector("[data-filters-form]");
+  if (fForm) {
+    fForm.addEventListener("change", function (e) {
+      if (e.target.type !== "checkbox") return;
+      fForm.closest("[data-filters]").classList.add("is-loading");
+      fForm.requestSubmit ? fForm.requestSubmit() : fForm.submit();
+    });
+  }
+
+  // Фото товара «перелетает» из карточки на страницу товара: имя перехода — только у нажатой карточки
+  if ("onpageswap" in window || document.startViewTransition) {
+    document.addEventListener("click", function (e) {
+      var link = e.target.closest && e.target.closest("[data-photo-link]");
+      if (!link || e.metaKey || e.ctrlKey || e.shiftKey || e.button !== 0) return;
+      var img = link.closest(".card") && link.closest(".card").querySelector(".card__img img");
+      document.querySelectorAll("[data-vt-photo]").forEach(function (n) { n.style.viewTransitionName = ""; n.removeAttribute("data-vt-photo"); });
+      if (img) { img.style.viewTransitionName = "product-photo"; img.setAttribute("data-vt-photo", ""); }
+    });
+    // Возврат назад из кэша страницы — имя снимаем, чтобы не мешало следующему переходу
+    window.addEventListener("pageshow", function () {
+      document.querySelectorAll("[data-vt-photo]").forEach(function (n) { n.style.viewTransitionName = ""; n.removeAttribute("data-vt-photo"); });
+    });
+  }
+
   // Плашка о cookie: отметка «Понятно» хранится только в браузере
   var cookie = document.querySelector("[data-cookie]");
   if (cookie) {

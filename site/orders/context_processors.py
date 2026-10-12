@@ -2,5 +2,6 @@ from .cart import Cart
 
 
 def cart(request):
-    """Количество позиций корзины для значка в шапке (без запроса к базе)."""
-    return {"cart_count": Cart(request).count}
+    """Значок корзины в шапке и количество каждого товара в корзине для счётчиков в карточках (без запроса к базе)."""
+    current = Cart(request)
+    return {"cart_count": current.count, "cart_qty": current.quantities()}

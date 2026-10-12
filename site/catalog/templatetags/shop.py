@@ -89,6 +89,22 @@ _UNIT_FORMS = {
 }
 
 
+@register.filter
+def unit_forms(unit):
+    """«мешок,мешка,мешков» — для склонения в браузере (data-атрибуты); несклоняемые — «шт,шт,шт»."""
+    unit = {"л.": "лист", "м2": "м²"}.get(unit, unit)
+    return _UNIT_FORMS.get(unit, ",".join([unit] * 3))
+
+
+@register.filter
+def in_cart(quantities, product_id):
+    """{{ cart_qty|in_cart:p.pk }} — сколько товара уже в корзине (0, если нет)."""
+    try:
+        return quantities.get(int(product_id), 0)
+    except (AttributeError, TypeError, ValueError):
+        return 0
+
+
 @register.simple_tag
 def unit_count(n, unit):
     """«48 рулонов», «2 мешка», «140 шт»."""

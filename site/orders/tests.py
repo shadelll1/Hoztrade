@@ -69,7 +69,27 @@ class TestCartAndCheckout:
     def test_add_via_fetch_returns_count(self, client, demo):
         p = Product.objects.first()
         r = client.post(f"/cart/add/{p.pk}/", HTTP_X_REQUESTED_WITH="fetch")
-        assert r.json()["count"] == 1
+        assert r.json()["count"] == 1 and r.json()["quantity"] == 1
+
+    def test_card_counter_sets_quantity(self, client, demo):
+        """Счётчик в карточке: добавить 5 штук сразу, затем задать 12, затем 0 — товар уходит из корзины."""
+        p = Product.objects.get(sku="ЦМ-500-50")
+        r = client.post(f"/cart/add/{p.pk}/", {"quantity": 5}, HTTP_X_REQUESTED_WITH="fetch")
+        assert r.json()["quantity"] == 5
+        r = client.post(f"/cart/update/{p.pk}/", {"quantity": 12}, HTTP_X_REQUESTED_WITH="fetch")
+        assert r.json() == {"count": 1, "total": str(12 * p.price_retail), "quantity": 12}
+        page = client.get(p.category.get_absolute_url())
+        assert page.context["cart_qty"] == {p.pk: 12}
+        assert 'class="buy is-in-cart"' in page.content.decode()   # карточка сразу показывает счётчик
+        r = client.post(f"/cart/update/{p.pk}/", {"quantity": 0}, HTTP_X_REQUESTED_WITH="fetch")
+        assert r.json()["quantity"] == 0 and r.json()["count"] == 0
+
+    def test_return_address_stays_on_site(self, client, demo):
+        p = Product.objects.first()
+        r = client.post(f"/cart/update/{p.pk}/", {"quantity": 2, "next": "/catalog/"})
+        assert r["Location"] == "/catalog/"
+        r = client.post(f"/cart/add/{p.pk}/", {"next": "https://evil.example/"})
+        assert r["Location"] == "/cart/"
 
     def test_checkout_creates_order_snapshot(self, client, demo):
         cement = Product.objects.get(sku="ЦМ-500-50")

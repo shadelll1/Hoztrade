@@ -1,0 +1,43 @@
+{% load shop %}{% comment %}
+  Покупка товара: «В корзину» -> счётчик «− 3 +», связанный с корзиной. Без JS — обычные формы.
+  product — товар, big — вариант для страницы товара (выбор количества до добавления, ссылка на корзину).
+{% endcomment %}
+{% with q=cart_qty|in_cart:product.pk %}
+<div class="buy{% if big %} buy--big{% endif %}{% if q %} is-in-cart{% endif %}" data-buy data-product="{{ product.pk }}"
+     data-name="{{ product.title }}" data-forms="{{ product.unit|unit_forms }}"
+     data-image="{% if product.list_image %}{{ product.list_image.url }}{% endif %}">
+  <form class="buy__add" method="post" action="{% url 'orders:cart_add' product.pk %}" data-buy-add>
+    {% csrf_token %}<input type="hidden" name="next" value="{{ request.get_full_path }}">
+    {% if big %}
+      <div class="stepper" data-stepper>
+        <button type="button" data-step="-1" aria-label="Меньше">−</button>
+        <input type="number" name="quantity" value="1" min="1" max="100000" step="1" inputmode="numeric" aria-label="Количество" data-buy-amount>
+        <button type="button" data-step="1" aria-label="Больше">+</button>
+      </div>
+    {% else %}
+      <input type="hidden" name="quantity" value="1" data-buy-amount>
+    {% endif %}
+    <button class="btn btn--buy{% if big %} btn--lg{% else %} btn--block{% endif %}" type="submit">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M3 4h2l2.4 11h11L21 7H6.2"/><circle cx="9" cy="19.5" r="1.5"/><circle cx="17" cy="19.5" r="1.5"/></svg>
+      <span>В корзину</span>{% if not big %}<span class="sr-only">: {{ product.title }}</span>{% endif %}
+    </button>
+  </form>
+  <form class="buy__qty" method="post" action="{% url 'orders:cart_update' product.pk %}" data-buy-set>
+    {% csrf_token %}<input type="hidden" name="next" value="{{ request.get_full_path }}">
+    <div class="qty">
+      <button class="qty__btn" type="button" data-buy-step="-1" aria-label="Убрать единицу из корзины">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M5 12h14"/></svg>
+      </button>
+      <label class="qty__field">
+        <input type="number" name="quantity" value="{{ q|default:1 }}" min="0" max="100000" step="1" inputmode="numeric"
+               aria-label="В корзине, {{ product.unit }}: {{ product.title }}" data-buy-qty>
+        <span class="qty__unit" aria-hidden="true">{{ product.unit }}</span>
+      </label>
+      <button class="qty__btn" type="button" data-buy-step="1" aria-label="Добавить ещё единицу">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+      </button>
+    </div>
+    {% if big %}<a class="btn btn--dark btn--lg" href="{% url 'orders:cart' %}">Перейти в корзину</a>{% endif %}
+  </form>
+</div>
+{% endwith %}

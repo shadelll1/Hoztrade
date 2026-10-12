@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load shop %}
+{% load static shop %}
 
 {% block title %}{{ product.title }} — цена {{ product.price_retail|rub }} | {{ site.name }}{% endblock %}
 {% block description %}{{ product.title }}: {{ product.price_retail|rub }} за {{ product.unit }}. {% if product.in_stock %}В наличии в Чебоксарах{% else %}Под заказ{% endif %}, доставка грузотакси.{% endblock %}
@@ -27,7 +27,7 @@
 
   <div class="pdp">
     <div class="pdp__media">
-      <div class="pdp__gallery" data-zoom>
+      <div class="pdp__gallery" data-zoom data-photo>
         {% if product.image %}<img src="{{ product.image.url }}" alt="{{ product.title }}" width="800" height="800">
         {% else %}{% root_of product.category as root %}<span class="ph ph--lg">{% category_icon root.name 120 %}</span>{% endif %}
         {% if not product.in_stock %}<span class="card__flag">Под заказ</span>{% endif %}
@@ -61,25 +61,22 @@
         {% if product.in_stock %}<div class="stock stock--yes">В наличии на складе: {% unit_count product.stock product.unit %}</div>
         {% else %}<div class="stock stock--no">Под заказ — срок уточнит менеджер</div>{% endif %}
 
-        {% if product.can_buy %}
-        <form class="buybox__actions" id="buy-form" method="post" action="{% url 'orders:cart_add' product.pk %}" data-add-to-cart>
-          {% csrf_token %}<input type="hidden" name="next" value="{{ request.get_full_path }}">
-          <div class="stepper" data-stepper>
-            <button type="button" data-step="-1" aria-label="Меньше">−</button>
-            <input type="number" name="quantity" value="1" min="1" step="1" inputmode="numeric" aria-label="Количество">
-            <button type="button" data-step="1" aria-label="Больше">+</button>
-          </div>
-          <button class="btn btn--primary btn--lg" type="submit">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M3 4h2l2.4 11h11L21 7H6.2"/><circle cx="9" cy="19.5" r="1.5"/><circle cx="17" cy="19.5" r="1.5"/></svg>
-            <span data-label>В корзину</span>
-          </button>
-        </form>
-        {% endif %}
+        {% if product.can_buy %}{% include "catalog/_buy.html" with product=product big=True %}{% endif %}
 
         <ul class="buybox__ways">
-          <li>
+          <li class="ship"{% if delivery %} data-ship{% endif %}>
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M2 6h12v10H2zM14 10h4l4 3v3h-8z"/><circle cx="6" cy="18" r="2"/><circle cx="18" cy="18" r="2"/></svg>
-            <span><b>Доставка грузотакси</b><small>Машину подберём по весу заказа, <a class="link" href="{% url 'pages:delivery' %}">тарифы по зонам</a></small></span>
+            <span>
+              <b>Доставка грузотакси</b>
+              {% if delivery %}
+                <label class="ship__zone"><span>Куда</span>
+                  <select data-ship-zone aria-label="Зона доставки">{% for z in delivery.zones %}<option value="{{ forloop.counter0 }}">{{ z.name }}</option>{% endfor %}</select>
+                </label>
+                <small class="ship__result" data-ship-result aria-live="polite">Машину подберём по весу заказа</small>
+              {% else %}
+                <small>Машину подберём по весу заказа, <a class="link" href="{% url 'pages:delivery' %}">тарифы по зонам</a></small>
+              {% endif %}
+            </span>
           </li>
           <li>
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M3 10 12 4l9 6v10H3z"/><path d="M9 20v-6h6v6"/></svg>
@@ -92,12 +89,14 @@
         </ul>
         <a class="link" href="tel:{{ site.phone_href }}">Заказать по телефону {{ site.phone }}</a>
       </div>
+      {% if calc %}{% include "catalog/_calc.html" %}{% endif %}
     </div>
   </div>
 
   <nav class="pdp-tabs" aria-label="Разделы страницы товара">
     {% if product.description %}<a href="#about">Описание</a>{% endif %}
     <a href="#specs">Характеристики</a>
+    {% if companions %}<a href="#together">С этим покупают</a>{% endif %}
     {% if trucks %}<a href="#delivery">Доставка</a>{% endif %}
     <a href="#reviews">Отзывы{% if rating.count %} <span>{{ rating.count }}</span>{% endif %}</a>
   </nav>
@@ -113,6 +112,7 @@
     <h2>Характеристики</h2>
     <dl class="specs">
       {% if product.sku %}<div><dt>Артикул</dt><dd>{{ product.sku }}</dd></div>{% endif %}
+      {% for label, value in product.attr_list %}<div><dt>{{ label }}</dt><dd>{{ value }}</dd></div>{% endfor %}
       <div><dt>Единица</dt><dd>{{ product.unit }}</dd></div>
       {% if product.weight_kg %}<div><dt>Вес</dt><dd>{{ product.weight_kg|qty }} кг</dd></div>{% endif %}
       {% if product.volume_m3 %}<div><dt>Объём</dt><dd>{{ product.volume_m3|qty }} м³</dd></div>{% endif %}
@@ -120,6 +120,13 @@
       {% if product.category %}<div><dt>Раздел</dt><dd><a href="{{ product.category.get_absolute_url }}">{{ product.category.name }}</a></dd></div>{% endif %}
     </dl>
   </section>
+
+  {% if companions %}
+    <section class="section-sm" id="together">
+      <h2>С этим покупают</h2>
+      <div class="grid">{% for p in companions %}{% include "catalog/_product_card.html" %}{% endfor %}</div>
+    </section>
+  {% endif %}
 
   {% if trucks %}
     <section class="section-sm" id="delivery">
@@ -174,7 +181,10 @@
 {% if product.can_buy %}
 <div class="buybar" data-buybar hidden>
   <div class="buybar__price"><b>{% if is_wholesale and product.price_wholesale %}{{ product.price_wholesale|rub }}{% else %}{{ product.price_retail|rub }}{% endif %}</b><span>за {{ product.unit }}</span></div>
-  <button class="btn btn--primary" type="submit" form="buy-form"><span data-label>В корзину</span></button>
+  {% include "catalog/_buy.html" with product=product big=False %}
 </div>
 {% endif %}
+{% if delivery %}{{ delivery|json_script:"ship-data" }}{% endif %}
 {% endblock %}
+
+{% block scripts %}<script src="{% static 'js/product.js' %}" defer></script>{% endblock %}
