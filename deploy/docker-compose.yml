@@ -59,7 +59,8 @@ services:
     build: ../site
     restart: unless-stopped
     depends_on:
-      - web
+      web:
+        condition: service_healthy   # таблицы CRM создаёт миграция при запуске сайта
     environment: *site-env
     command: ["sh", "-c", "while true; do python manage.py crm_remind; sleep 300; done"]
     healthcheck:
