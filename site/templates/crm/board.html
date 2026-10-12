@@ -1,0 +1,56 @@
+{% extends "crm/base.html" %}
+{% load shop crm %}
+{% block title %}Воронка{% endblock %}
+{% block heading %}Воронка{% endblock %}
+
+{% block content %}
+<form class="crm-filters" method="get" data-crm-autosubmit>
+  <div class="seg" role="group" aria-label="Чьи обращения">
+    {% for value, label in who_choices %}
+      <label><input type="radio" name="who" value="{{ value }}" {% if who == value %}checked{% endif %}><span>{{ label }}</span></label>
+    {% endfor %}
+  </div>
+  <label class="crm-select"><span class="sr-only">Источник</span>
+    <select name="source">
+      <option value="">Все источники</option>
+      {% for value, label in sources %}<option value="{{ value }}" {% if source == value %}selected{% endif %}>{{ label }}</option>{% endfor %}
+    </select>
+  </label>
+  {% if q %}<input type="hidden" name="q" value="{{ q }}"><a class="link" href="?who={{ who }}">Сбросить поиск «{{ q }}»</a>{% endif %}
+  <noscript><button class="btn btn--ghost" type="submit">Показать</button></noscript>
+  <p class="crm-hint"><span class="hint-drag">Перетащите карточку в другую колонку, чтобы сменить этап (с клавиатуры — Alt+← и Alt+→).</span><span class="hint-touch">Этап меняется в карточке обращения.</span> Выполненные и отказы — за {{ closed_days }} дней.</p>
+</form>
+
+<div class="board" data-board data-move-url="{% url 'crm:deal_move' 0 %}">
+  {% csrf_token %}
+  {% for col in columns %}
+    <section class="col col--{{ col.stage }}" data-stage="{{ col.stage }}" aria-labelledby="col-{{ col.stage }}">
+      <header class="col__head">
+        <h2 id="col-{{ col.stage }}">{{ col.label }}</h2>
+        <span class="col__n" data-col-count>{{ col.deals|length }}</span>
+        {% if col.sum %}<span class="col__sum">{{ col.sum|rub }}</span>{% endif %}
+      </header>
+      <ol class="col__list" data-drop>
+        {% for d in col.deals %}
+          <li class="deal-card{% if d.has_overdue %} is-overdue{% endif %}" draggable="true" data-deal="{{ d.pk }}">
+            <a class="deal-card__link" href="{{ d.get_absolute_url }}">
+              <span class="deal-card__top"><span class="tag-src tag-src--{{ d.source }}">{{ d.get_source_display }}</span><time datetime="{{ d.created_at|date:'c' }}">{{ d.created_at|ago }}</time></span>
+              <b class="deal-card__client">{{ d.client }}</b>
+              <span class="deal-card__title">{{ d.title }}</span>
+              <span class="deal-card__foot">
+                {% if d.amount %}<b class="deal-card__sum">{{ d.amount|rub }}</b>{% endif %}
+                {% if d.next_task %}<span class="deal-card__task{% if d.has_overdue %} is-late{% endif %}" title="Ближайшая задача">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M12 7v5l3 2"/></svg>{{ d.next_task|date:"j E, H:i" }}</span>{% endif %}
+                {% if d.manager %}<span class="avatar" title="{{ d.manager.get_full_name|default:d.manager.username }}">{{ d.manager|initials }}</span>
+                {% else %}<span class="avatar avatar--none" title="Менеджер не назначен">?</span>{% endif %}
+              </span>
+            </a>
+          </li>
+        {% empty %}
+          <li class="col__empty">Пусто</li>
+        {% endfor %}
+      </ol>
+    </section>
+  {% endfor %}
+</div>
+{% endblock %}

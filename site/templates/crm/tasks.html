@@ -1,0 +1,23 @@
+{% extends "crm/base.html" %}
+{% block title %}Задачи{% endblock %}
+{% block heading %}Задачи{% endblock %}
+
+{% block content %}
+<form class="crm-filters" method="get" data-crm-autosubmit>
+  <div class="seg" role="group" aria-label="Чьи задачи">
+    <label><input type="radio" name="who" value="me" {% if who == "me" %}checked{% endif %}><span>Мои</span></label>
+    <label><input type="radio" name="who" value="all" {% if who == "all" %}checked{% endif %}><span>Все</span></label>
+  </div>
+  <noscript><button class="btn btn--ghost" type="submit">Показать</button></noscript>
+  <p class="crm-hint">Задачу ставят в карточке обращения. Напоминание приходит на почту и в Telegram за 15 минут до срока.</p>
+</form>
+
+<div class="task-groups">
+  {% for key, label, items in groups %}
+    <section class="panel task-group task-group--{{ key }}" aria-labelledby="tg-{{ key }}">
+      <h2 id="tg-{{ key }}">{{ label }} <span class="muted">{{ items|length }}</span></h2>
+      {% include "crm/_tasks.html" with tasks=items show_client=True %}
+    </section>
+  {% endfor %}
+</div>
+{% endblock %}

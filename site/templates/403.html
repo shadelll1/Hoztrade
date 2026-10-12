@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% block title %}Нет доступа | {{ site.name }}{% endblock %}
+{% block head %}<meta name="robots" content="noindex">{% endblock %}
+{% block content %}
+<div class="wrap page page--narrow">
+  <div class="empty">
+    <b>Нет доступа к этой странице</b>
+    <span>{% if request.path|slice:":5" == "/crm/" %}Раздел CRM открыт сотрудникам из групп «Менеджеры» и «Руководители», отчёты — только руководителям. Попросите администратора добавить вас в группу (админка → Пользователи).{% else %}Если вы сотрудник, войдите под своей учётной записью.{% endif %}</span>
+  </div>
+</div>
+{% endblock %}

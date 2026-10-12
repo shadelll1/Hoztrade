@@ -1,0 +1,104 @@
+{% extends "crm/base.html" %}
+{% load shop l10n %}
+{% block title %}Отчёты{% endblock %}
+{% block heading %}Отчёты{% endblock %}
+
+{% block content %}
+<form class="crm-filters" method="get" data-crm-autosubmit>
+  <div class="seg" role="group" aria-label="Период">
+    {% for value, label in periods %}<label><input type="radio" name="days" value="{{ value }}" {% if days == value %}checked{% endif %}><span>{{ label }}</span></label>{% endfor %}
+  </div>
+  <noscript><button class="btn btn--ghost" type="submit">Показать</button></noscript>
+  <p class="crm-hint">С {{ r.start|date:"j E Y" }} по сегодня. Обращения — созданные за период.</p>
+</form>
+
+<section class="kpis" aria-label="Главное за период">
+  <div class="kpi kpi--hero"><span>Выручка по выполненным</span><b>{{ r.won_sum|rub }}</b><small>{{ r.won }} {{ r.won|plural:"обращение,обращения,обращений" }}</small></div>
+  <div class="kpi"><span>Обращений</span><b>{{ r.total }}</b><small>сейчас в работе {{ r.open_now }}</small></div>
+  <div class="kpi"><span>Конверсия закрытых</span><b>{{ r.conv }} %</b><small>выполнено {{ r.won }}, отказ {{ r.lost }}</small></div>
+  <div class="kpi"><span>Первый ответ, медиана</span><b>{{ r.response }}</b><small>от обращения до первого действия</small></div>
+  <div class="kpi{% if r.overdue_now %} kpi--alert{% endif %}"><span>Просрочено задач</span><b>{{ r.overdue_now }}</b><small>на сейчас, у всех</small></div>
+</section>
+
+<section class="panel chart-card" aria-labelledby="daily-h">
+  <h2 id="daily-h">Обращения по {% if r.daily.step == 1 %}дням{% else %}неделям{% endif %}</h2>
+  {% localize off %}{% with d=r.daily %}
+  <svg class="chart" viewBox="{{ d.view }}" role="img" aria-label="Количество обращений по {% if d.step == 1 %}дням{% else %}неделям{% endif %}, максимум {{ d.top }}">
+    {% for t in d.ticks %}<line class="chart__grid" x1="0" x2="{{ d.w }}" y1="{{ t.y }}" y2="{{ t.y }}"/><text class="chart__tick" x="-8" y="{{ t.y }}" dy="4" text-anchor="end">{{ t.v }}</text>{% endfor %}
+    {% for b in d.bars %}
+      <g class="chart__bar">
+        <title>{{ b.from|date:"j E" }}{% if d.step != 1 %} и неделя после{% endif %}: {{ b.n }}</title>
+        <rect class="chart__hit" x="{{ b.hit_x }}" y="0" width="{{ b.hit_w }}" height="{{ d.h }}"/>
+        {% if b.path %}<path class="chart__mark" d="{{ b.path }}"/>{% endif %}
+      </g>
+      {% if b.show_label %}<text class="chart__tick" x="{{ b.lx }}" y="{{ d.label_y }}" text-anchor="middle">{{ b.label }}</text>{% endif %}
+    {% endfor %}
+    <line class="chart__base" x1="0" x2="{{ d.w }}" y1="{{ d.h }}" y2="{{ d.h }}"/>
+  </svg>
+  {% endwith %}{% endlocalize %}
+</section>
+
+<div class="report-grid">
+  <section class="panel" aria-labelledby="src-h">
+    <h2 id="src-h">Откуда приходят</h2>
+    <table class="table hbar-table">
+      <thead><tr><th>Источник</th><th>Обращений</th><th class="num">Конверсия</th><th class="num">Выручка</th></tr></thead>
+      <tbody>
+        {% for row in r.by_source %}
+          <tr>
+            <td>{{ row.label }}</td>
+            <td class="hbar-cell"><svg class="hbar" role="img" aria-label="{{ row.n }}"><title>{{ row.label }}: {{ row.n }}</title>{% if row.bar_w %}<rect class="hbar__mark" x="0" y="4" width="{{ row.bar_w }}" height="12" rx="3"/>{% endif %}<text class="hbar__val" x="{{ row.label_x }}" y="14">{{ row.n }}</text></svg></td>
+            <td class="num">{{ row.conv }} %</td>
+            <td class="num">{{ row.sum|rub }}</td>
+          </tr>
+        {% empty %}<tr><td colspan="4" class="muted">За период обращений нет</td></tr>{% endfor %}
+      </tbody>
+    </table>
+  </section>
+
+  <section class="panel" aria-labelledby="funnel-h">
+    <h2 id="funnel-h">Воронка</h2>
+    <p class="muted small">Сколько обращений периода дошло до этапа</p>
+    <table class="table hbar-table">
+      <tbody>
+        {% for row in r.funnel %}
+          <tr>
+            <td>{{ row.label }}</td>
+            <td class="hbar-cell"><svg class="hbar" role="img" aria-label="{{ row.n }}, {{ row.share }} %"><title>{{ row.label }}: {{ row.n }} ({{ row.share }} %)</title>{% if row.bar_w %}<rect class="hbar__mark hbar__mark--funnel" x="0" y="4" width="{{ row.bar_w }}" height="12" rx="3"/>{% endif %}<text class="hbar__val" x="{{ row.label_x }}" y="14">{{ row.n }}</text></svg></td>
+            <td class="num">{{ row.share }} %</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </section>
+</div>
+
+<section class="panel" aria-labelledby="mgr-h">
+  <h2 id="mgr-h">Менеджеры</h2>
+  <div class="table-wrap table-wrap--flat">
+    <table class="table hbar-table">
+      <thead><tr><th>Менеджер</th><th class="num">Обращений</th><th class="num">Выполнено</th><th class="num">Конверсия</th><th>Выручка</th><th class="num">Первый ответ</th><th class="num">Просрочено</th></tr></thead>
+      <tbody>
+        {% for row in r.by_manager %}
+          <tr{% if row.muted %} class="muted"{% endif %}>
+            <td>{{ row.name }}</td>
+            <td class="num">{{ row.n }}</td>
+            <td class="num">{{ row.won }}</td>
+            <td class="num">{{ row.conv }} %</td>
+            <td class="hbar-cell"><svg class="hbar" role="img" aria-label="{{ row.sum|rub }}"><title>{{ row.name }}: {{ row.sum|rub }}</title>{% if row.bar_w %}<rect class="hbar__mark" x="0" y="4" width="{{ row.bar_w }}" height="12" rx="3"/>{% endif %}<text class="hbar__val" x="{{ row.label_x }}" y="14">{{ row.sum|rub }}</text></svg></td>
+            <td class="num">{{ row.response }}</td>
+            <td class="num">{% if row.overdue %}<b class="late">{{ row.overdue }}</b>{% else %}0{% endif %}</td>
+          </tr>
+        {% empty %}<tr><td colspan="7" class="muted">Нет данных за период</td></tr>{% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+
+{% if r.reasons %}
+<section class="panel" aria-labelledby="lost-h">
+  <h2 id="lost-h">Причины отказов</h2>
+  <ul class="mini-list">{% for reason, n in r.reasons %}<li><span>{{ reason }}</span><b>{{ n }}</b></li>{% endfor %}</ul>
+</section>
+{% endif %}
+{% endblock %}

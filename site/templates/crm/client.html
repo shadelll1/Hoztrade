@@ -1,0 +1,73 @@
+{% extends "crm/base.html" %}
+{% load shop %}
+{% block title %}{{ client }}{% endblock %}
+{% block heading %}<a class="crm-back" href="{% url 'crm:clients' %}">Клиенты</a> <span>{{ client }}</span>{% endblock %}
+
+{% block content %}
+<div class="deal">
+  <div class="deal__main">
+    <section class="panel">
+      <div class="client-stats">
+        <div><span>Обращений</span><b>{{ deals|length }}</b></div>
+        <div><span>Выполнено</span><b>{{ won.n }}</b></div>
+        <div><span>Купил на</span><b>{{ won.s|default:0|rub }}</b></div>
+        <div><span>Первое обращение</span><b>{{ first_at|date:"j E Y"|default:"—" }}</b></div>
+      </div>
+    </section>
+
+    <section class="panel" aria-labelledby="deals-h">
+      <h2 id="deals-h">Обращения</h2>
+      <div class="table-wrap table-wrap--flat">
+        <table class="table crm-table">
+          <thead><tr><th>Номер</th><th>Суть</th><th>Этап</th><th>Менеджер</th><th class="num">Сумма</th><th>Дата</th></tr></thead>
+          <tbody>
+            {% for d in deals %}
+              <tr>
+                <td class="nowrap"><a href="{{ d.get_absolute_url }}">{{ d.number }}</a></td>
+                <td>{{ d.title }}</td>
+                <td><span class="stage-dot stage-dot--{{ d.stage }}">{{ d.get_stage_display }}</span></td>
+                <td>{{ d.manager.get_full_name|default:"—" }}</td>
+                <td class="num">{% if d.amount %}{{ d.amount|rub }}{% endif %}</td>
+                <td class="nowrap">{{ d.created_at|date:"j E Y" }}</td>
+              </tr>
+            {% empty %}<tr><td colspan="6" class="muted">Обращений нет</td></tr>{% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="panel" aria-labelledby="cfeed-h">
+      <h2 id="cfeed-h">История</h2>
+      <form method="post" class="note-form">
+        {% csrf_token %}<input type="hidden" name="action" value="note">
+        <div class="seg seg--sm" role="group" aria-label="Тип записи">
+          {% for value, label in note_form.fields.kind.choices %}<label><input type="radio" name="kind" value="{{ value }}" {% if forloop.first %}checked{% endif %}><span>{{ label }}</span></label>{% endfor %}
+        </div>
+        <label class="sr-only" for="cnote-text">Текст заметки</label>
+        <textarea id="cnote-text" name="text" rows="2" required maxlength="4000" placeholder="Заметка о клиенте"></textarea>
+        <button class="btn btn--dark" type="submit">Добавить</button>
+      </form>
+      {% include "crm/_feed.html" with activities=activities show_deal=True %}
+    </section>
+  </div>
+
+  <aside class="deal__side">
+    <section class="panel" aria-labelledby="contacts-h">
+      <h2 id="contacts-h">Контакты</h2>
+      {% if client.phone %}<a class="btn btn--dark btn--block" href="tel:{{ client.phone }}">Позвонить {{ client.phone }}</a>{% endif %}
+      <form method="post" class="stack">
+        {% csrf_token %}<input type="hidden" name="action" value="edit">
+        {% for field in form %}{% include "orders/_field.html" with field=field %}{% endfor %}
+        <button class="btn btn--ghost" type="submit">Сохранить</button>
+      </form>
+      {% if client.user %}<p class="muted small">Есть учётная запись на сайте: {{ client.user.email }}</p>{% endif %}
+    </section>
+    {% if tasks %}
+    <section class="panel">
+      <h2>Открытые задачи</h2>
+      {% include "crm/_tasks.html" with tasks=tasks show_client=False %}
+    </section>
+    {% endif %}
+  </aside>
+</div>
+{% endblock %}

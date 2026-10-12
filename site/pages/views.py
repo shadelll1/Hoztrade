@@ -10,7 +10,7 @@ from django.views.decorators.cache import cache_page, never_cache
 from exchange.models import ExchangeContact
 
 # Служебные разделы, корзина, личные страницы и результаты поиска — не для поисковиков.
-DISALLOW = ["/admin/", "/api/", "/account/", "/cart/", "/checkout/", "/order/", "/search/", "/healthz/"]
+DISALLOW = ["/admin/", "/api/", "/account/", "/cart/", "/checkout/", "/order/", "/search/", "/healthz/", "/crm/"]
 
 
 @cache_page(60 * 60)

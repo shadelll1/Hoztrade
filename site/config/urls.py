@@ -18,6 +18,7 @@ urlpatterns = [
     path("admin/", admin.site.urls),
     path("api/v1/", include("exchange.urls")),
     path("account/", include("accounts.urls")),
+    path("crm/", include("crm.urls")),
     path("", include("orders.urls")),
     path("", include("content.urls")),
     path("", include("pages.urls")),

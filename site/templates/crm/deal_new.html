@@ -1,0 +1,21 @@
+{% extends "crm/base.html" %}
+{% block title %}Новое обращение{% endblock %}
+{% block heading %}<a class="crm-back" href="{% url 'crm:board' %}">Воронка</a> <span>Новое обращение</span>{% endblock %}
+
+{% block content %}
+<form method="post" class="panel crm-form" novalidate>
+  {% csrf_token %}
+  <p class="muted">Звонок или визит в магазин. Клиента найдём по телефону, если он уже есть в базе.</p>
+  <div class="fields">
+    {% include "orders/_field.html" with field=form.name %}
+    {% include "orders/_field.html" with field=form.phone %}
+    {% include "orders/_field.html" with field=form.email %}
+    {% include "orders/_field.html" with field=form.company %}
+    {% include "orders/_field.html" with field=form.source %}
+    {% include "orders/_field.html" with field=form.amount %}
+    {% include "orders/_field.html" with field=form.title class="field--wide" %}
+    {% include "orders/_field.html" with field=form.text class="field--wide" %}
+  </div>
+  <button class="btn btn--primary btn--lg" type="submit">Создать обращение</button>
+</form>
+{% endblock %}

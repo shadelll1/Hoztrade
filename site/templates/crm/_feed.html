@@ -1,0 +1,19 @@
+{% load crm %}
+<ol class="feed">
+  {% for a in activities %}
+    <li class="feed__item feed__item--{{ a.kind }}">
+      <span class="feed__dot" aria-hidden="true"></span>
+      <div class="feed__body">
+        <div class="feed__meta">
+          <b>{% if a.author %}{{ a.author.get_full_name|default:a.author.username }}{% else %}Система{% endif %}</b>
+          <span>{{ a.get_kind_display }}</span>
+          {% if show_deal and a.deal %}<a href="{{ a.deal.get_absolute_url }}">{{ a.deal.number }}</a>{% endif %}
+          <time datetime="{{ a.created_at|date:'c' }}">{{ a.created_at|date:"j E, H:i" }}</time>
+        </div>
+        <p>{{ a.text|linebreaksbr }}</p>
+      </div>
+    </li>
+  {% empty %}
+    <li class="feed__empty">Записей пока нет</li>
+  {% endfor %}
+</ol>

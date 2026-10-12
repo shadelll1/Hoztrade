@@ -1,0 +1,23 @@
+{% load crm %}
+<ul class="task-list">
+  {% for t in tasks %}
+    <li class="task{% if t.done_at %} is-done{% elif t.is_overdue %} is-late{% endif %}" data-task>
+      <form method="post" action="{% url 'crm:task_done' t.pk %}" data-task-done>
+        {% csrf_token %}<input type="hidden" name="next" value="{{ request.get_full_path }}">
+        <button class="task__check" type="submit" {% if t.done_at %}disabled aria-label="Выполнена"{% else %}aria-label="Отметить выполненной: {{ t.title }}"{% endif %}>
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m3.5 8.2 3 3 6-6.4"/></svg>
+        </button>
+      </form>
+      <div class="task__body">
+        <span class="task__title">{{ t.title }}</span>
+        <span class="task__meta">
+          <time datetime="{{ t.due_at|date:'c' }}">{% if t.done_at %}выполнена {{ t.done_at|date:"j E, H:i" }}{% else %}{{ t.due_at|date:"j E, H:i" }}{% endif %}</time>
+          {% if t.assignee %}<span>{{ t.assignee.get_full_name|default:t.assignee.username }}</span>{% endif %}
+          {% if show_client %}{% with c=t.client|default:t.deal.client %}{% if t.deal %}<a href="{{ t.deal.get_absolute_url }}">{{ c }}{% if c.phone %}, {{ c.phone }}{% endif %}</a>{% elif c %}<a href="{{ c.get_absolute_url }}">{{ c }}</a>{% endif %}{% endwith %}{% endif %}
+        </span>
+      </div>
+    </li>
+  {% empty %}
+    <li class="task-list__empty">Задач нет</li>
+  {% endfor %}
+</ul>

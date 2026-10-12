@@ -100,8 +100,8 @@ def checkout(request):
         order = _create_order(request, form, cart)
         cart.clear()
         emails.order_created(order, request)
-        admin_url = request.build_absolute_uri(reverse("admin:orders_order_change", args=[order.pk]))
-        _notify(f"Новый заказ {order.number} на {order.total} ₽", f"{order.name}, {order.phone}\n{admin_url}")
+        _notify(f"Новый заказ {order.number} на {order.total} ₽",
+                f"{order.name}, {order.phone}\n{_crm_link(request, order)}")
         return redirect(order.get_absolute_url() + "?new=1")
 
     quotes = cart.delivery_quotes
@@ -169,7 +169,7 @@ def order_list(request):
         lead = form.save(commit=False)
         lead.kind = Lead.Kind.LIST
         lead.save()
-        _notify(f"Заказ по списку от {lead.name}", f"{lead.phone}\n{lead.text}")
+        _notify(f"Заказ по списку от {lead.name}", f"{lead.phone}\n{lead.text}\n{_crm_link(request, lead)}")
         messages.success(request, "Заявка принята. Менеджер соберёт заказ и перезвонит.")
         return redirect("orders:order_list")
     return render(request, "orders/order_list.html", {"form": form})
@@ -183,14 +183,23 @@ def callback(request):
         lead = form.save(commit=False)
         lead.kind = Lead.Kind.CALLBACK
         lead.save()
-        _notify(f"Обратный звонок: {lead.name}", lead.phone)
+        _notify(f"Обратный звонок: {lead.name}", f"{lead.phone}\n{_crm_link(request, lead)}")
     if _wants_json(request):
         return JsonResponse({"ok": ok, "errors": form.errors if not ok else {}}, status=200 if ok else 400)
     if ok:
         messages.success(request, "Спасибо! Перезвоним в рабочее время.")
     else:
         messages.error(request, "Проверьте имя и телефон.")
-    return redirect(request.POST.get("next") or "/")
+    return redirect(_safe_next(request) or "/")
+
+
+def _crm_link(request, obj):
+    """Ссылка на обращение в CRM (оно создаётся сигналом при сохранении), иначе — на объект в админке."""
+    deal = getattr(obj, "deal", None) if obj.pk else None
+    if deal is not None:
+        return request.build_absolute_uri(deal.get_absolute_url())
+    name = "admin:orders_order_change" if isinstance(obj, Order) else "admin:orders_lead_change"
+    return request.build_absolute_uri(reverse(name, args=[obj.pk]))
 
 
 def _notify(subject, body):

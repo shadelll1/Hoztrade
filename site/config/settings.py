@@ -48,6 +48,7 @@ INSTALLED_APPS = [
     "pages",
     "exchange",
     "accounts",
+    "crm",
 ]
 
 MIDDLEWARE = [

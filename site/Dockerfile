@@ -33,4 +33,4 @@ HEALTHCHECK --interval=30s --timeout=5s --retries=3 \
     CMD python -c "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/healthz/', timeout=4)"
 
 # Миграции при каждом запуске (идемпотентны), затем gunicorn: 3 процесса по 4 потока
-CMD ["sh", "-c", "python manage.py migrate --noinput && exec gunicorn config.wsgi:application --bind 0.0.0.0:8000 --workers 3 --threads 4 --timeout 60 --access-logfile - --forwarded-allow-ips='*'"]
+CMD ["sh", "-c", "python manage.py migrate --noinput && (python manage.py crm_sync || true) && exec gunicorn config.wsgi:application --bind 0.0.0.0:8000 --workers 3 --threads 4 --timeout 60 --access-logfile - --forwarded-allow-ips='*'"]
