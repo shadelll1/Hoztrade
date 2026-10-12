@@ -1,18 +1,25 @@
 {% extends "crm/base.html" %}
-{% load shop %}
+{% load shop crm %}
 {% block title %}{{ client }}{% endblock %}
 {% block heading %}<a class="crm-back" href="{% url 'crm:clients' %}">Клиенты</a> <span>{{ client }}</span>{% endblock %}
 
 {% block content %}
 <div class="deal">
   <div class="deal__main">
-    <section class="panel">
-      <div class="client-stats">
-        <div><span>Обращений</span><b>{{ deals|length }}</b></div>
-        <div><span>Выполнено</span><b>{{ won.n }}</b></div>
-        <div><span>Купил на</span><b>{{ won.s|default:0|rub }}</b></div>
-        <div><span>Первое обращение</span><b>{{ first_at|date:"j E Y"|default:"—" }}</b></div>
+    <section class="panel client-hero">
+      <div class="client-box__head">
+        <span class="mono mono--lg" aria-hidden="true">{{ client|monogram }}</span>
+        <div>
+          <h2>{{ client.name }}</h2>
+          <span class="muted">{% if client.company %}{{ client.company }}{% if client.inn %}, ИНН {{ client.inn }}{% endif %}{% else %}Частное лицо{% endif %}{% if client.phone %}, <a href="tel:{{ client.phone }}">{{ client.phone }}</a>{% endif %}</span>
+        </div>
       </div>
+      <dl class="facts facts--4">
+        <div><dt>Обращений</dt><dd class="facts__money">{{ deals|length }}</dd></div>
+        <div><dt>Выполнено</dt><dd class="facts__money">{{ won.n }}</dd></div>
+        <div><dt>Купил на</dt><dd class="facts__money">{{ won.s|default:0|rub }}</dd></div>
+        <div><dt>С нами с</dt><dd class="facts__money">{{ first_at|date:"j E Y"|default:"—" }}</dd></div>
+      </dl>
     </section>
 
     <section class="panel" aria-labelledby="deals-h">

@@ -4,6 +4,36 @@
 {% block heading %}Воронка{% endblock %}
 
 {% block content %}
+{% with s=summary %}
+<section class="tablo" aria-label="Сводка">
+  <a class="tablo__cell{% if s.wait %} is-hot{% endif %}" href="?only=wait{% if who != 'all' %}&amp;who={{ who }}{% endif %}">
+    <span class="tablo__label">Ждут ответа</span>
+    <b class="tablo__num">{{ s.wait }}</b>
+    <span class="tablo__note">{% if s.wait_long %}дольше часа: {{ s.wait_long }}, самое давнее {{ s.wait_oldest|ago }}{% elif s.wait %}все меньше часа{% else %}всем ответили{% endif %}</span>
+  </a>
+  <a class="tablo__cell{% if s.overdue %} is-hot{% endif %}" href="{% url 'crm:tasks' %}?who={{ s.tasks_who }}">
+    <span class="tablo__label">Просрочено задач</span>
+    <b class="tablo__num">{{ s.overdue }}</b>
+    <span class="tablo__note">{% if s.tasks_who == "me" %}мои{% else %}у всех менеджеров{% endif %}</span>
+  </a>
+  <a class="tablo__cell" href="{% url 'crm:tasks' %}?who={{ s.tasks_who }}">
+    <span class="tablo__label">Задачи на сегодня</span>
+    <b class="tablo__num">{{ s.today }}</b>
+    <span class="tablo__note">до конца дня</span>
+  </a>
+  <div class="tablo__cell tablo__cell--money">
+    <span class="tablo__label">В работе</span>
+    <b class="tablo__num">{{ s.open_sum|rub }}</b>
+    <span class="tablo__note">{{ s.open }} {{ s.open|plural:"обращение,обращения,обращений" }}</span>
+  </div>
+  <div class="tablo__cell tablo__cell--money">
+    <span class="tablo__label">Выполнено за {{ closed_days }} дней</span>
+    <b class="tablo__num">{{ s.won_sum|rub }}</b>
+    <span class="tablo__note">{{ s.won }} {{ s.won|plural:"обращение,обращения,обращений" }}</span>
+  </div>
+</section>
+{% endwith %}
+
 <form class="crm-filters" method="get" data-crm-autosubmit>
   <div class="seg" role="group" aria-label="Чьи обращения">
     {% for value, label in who_choices %}
@@ -16,34 +46,45 @@
       {% for value, label in sources %}<option value="{{ value }}" {% if source == value %}selected{% endif %}>{{ label }}</option>{% endfor %}
     </select>
   </label>
-  {% if q %}<input type="hidden" name="q" value="{{ q }}"><a class="link" href="?who={{ who }}">Сбросить поиск «{{ q }}»</a>{% endif %}
+  {% if only == "wait" %}<input type="hidden" name="only" value="wait"><a class="chip-reset" href="?who={{ who }}">Только ждущие ответа <span aria-hidden="true">×</span><span class="sr-only">— показать все</span></a>{% endif %}
+  {% if q %}<input type="hidden" name="q" value="{{ q }}"><a class="chip-reset" href="?who={{ who }}">Поиск «{{ q }}» <span aria-hidden="true">×</span><span class="sr-only">— сбросить</span></a>{% endif %}
   <noscript><button class="btn btn--ghost" type="submit">Показать</button></noscript>
-  <p class="crm-hint"><span class="hint-drag">Перетащите карточку в другую колонку, чтобы сменить этап (с клавиатуры — Alt+← и Alt+→).</span><span class="hint-touch">Этап меняется в карточке обращения.</span> Выполненные и отказы — за {{ closed_days }} дней.</p>
+  <p class="crm-hint"><span class="hint-drag">Этап меняется перетаскиванием карточки, с клавиатуры — Alt+← и Alt+→.</span><span class="hint-touch">Этап меняется в карточке обращения.</span> Закрытые — за {{ closed_days }} дней.</p>
 </form>
 
 <div class="board" data-board data-move-url="{% url 'crm:deal_move' 0 %}">
   {% csrf_token %}
   {% for col in columns %}
-    <section class="col col--{{ col.stage }}" data-stage="{{ col.stage }}" aria-labelledby="col-{{ col.stage }}">
+    {% if col.stage == "won" %}<div class="col-stack">{% endif %}
+    <section class="col col--{{ col.stage }}{% if col.closed %} col--closed{% endif %}" data-stage="{{ col.stage }}" aria-labelledby="col-{{ col.stage }}">
       <header class="col__head">
-        <h2 id="col-{{ col.stage }}">{{ col.label }}</h2>
-        <span class="col__n" data-col-count>{{ col.deals|length }}</span>
-        {% if col.sum %}<span class="col__sum">{{ col.sum|rub }}</span>{% endif %}
+        <div class="col__title">
+          <h2 id="col-{{ col.stage }}"><i class="stage-mark stage-mark--{{ col.stage }}" aria-hidden="true"></i>{{ col.label }}</h2>
+          <span class="col__n" data-col-count>{{ col.deals|length }}</span>
+        </div>
+        <span class="col__sum">{% if col.sum %}{{ col.sum|rub }}{% else %}—{% endif %}</span>
+        {% if not col.closed %}
+          <svg class="col__share" role="img" aria-label="{{ col.share|floatformat:0 }} % денег в работе"><title>{{ col.share|floatformat:0 }} % суммы в работе</title><rect class="col__share-track" x="0" y="0" width="100%" height="4" rx="2"/>{% if col.share_w %}<rect class="col__share-bar stage-fill--{{ col.stage }}" x="0" y="0" width="{{ col.share_w }}" height="4" rx="2"/>{% endif %}</svg>
+        {% endif %}
       </header>
       <ol class="col__list" data-drop>
         {% for d in col.deals %}
-          <li class="deal-card{% if d.has_overdue %} is-overdue{% endif %}" draggable="true" data-deal="{{ d.pk }}">
+          <li class="deal-card{% if d.has_overdue %} is-overdue{% endif %}{% if d.wait_level %} wait--{{ d.wait_level }}{% endif %}" draggable="true" data-deal="{{ d.pk }}">
             <a class="deal-card__link" href="{{ d.get_absolute_url }}">
-              <span class="deal-card__top"><span class="tag-src tag-src--{{ d.source }}">{{ d.get_source_display }}</span><time datetime="{{ d.created_at|date:'c' }}">{{ d.created_at|ago }}</time></span>
+              <span class="deal-card__top">
+                <span class="src src--{{ d.source }}">{{ d.get_source_display }}</span>
+                {% if d.wait_min is not None %}<span class="wait" title="Без ответа с {{ d.created_at|date:'j E, H:i' }}">ждёт {{ d.created_at|ago }}</span>
+                {% else %}<time datetime="{{ d.created_at|date:'c' }}" title="{{ d.created_at|date:'j E Y, H:i' }}">{{ d.created_at|ago }}</time>{% endif %}
+              </span>
               <b class="deal-card__client">{{ d.client }}</b>
-              <span class="deal-card__title">{{ d.title }}</span>
+              {% if not col.closed %}<span class="deal-card__title">{{ d.title }}</span>{% endif %}
               <span class="deal-card__foot">
-                {% if d.amount %}<b class="deal-card__sum">{{ d.amount|rub }}</b>{% endif %}
-                {% if d.next_task %}<span class="deal-card__task{% if d.has_overdue %} is-late{% endif %}" title="Ближайшая задача">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M12 7v5l3 2"/></svg>{{ d.next_task|date:"j E, H:i" }}</span>{% endif %}
+                <b class="deal-card__sum">{% if d.amount %}{{ d.amount|rub }}{% else %}<span class="muted">сумма не указана</span>{% endif %}</b>
                 {% if d.manager %}<span class="avatar" title="{{ d.manager.get_full_name|default:d.manager.username }}">{{ d.manager|initials }}</span>
                 {% else %}<span class="avatar avatar--none" title="Менеджер не назначен">?</span>{% endif %}
               </span>
+              {% if d.next_task and not col.closed %}<span class="deal-card__task{% if d.has_overdue %} is-late{% endif %}">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M12 7v5l3 2"/></svg>{% if d.has_overdue %}просрочена задача{% else %}задача {{ d.next_task|date:"j E, H:i" }}{% endif %}</span>{% endif %}
             </a>
           </li>
         {% empty %}
@@ -51,6 +92,7 @@
         {% endfor %}
       </ol>
     </section>
+    {% if col.stage == "lost" %}</div>{% endif %}
   {% endfor %}
 </div>
 {% endblock %}

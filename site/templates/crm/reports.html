@@ -13,10 +13,14 @@
 </form>
 
 <section class="kpis" aria-label="Главное за период">
-  <div class="kpi kpi--hero"><span>Выручка по выполненным</span><b>{{ r.won_sum|rub }}</b><small>{{ r.won }} {{ r.won|plural:"обращение,обращения,обращений" }}</small></div>
-  <div class="kpi"><span>Обращений</span><b>{{ r.total }}</b><small>сейчас в работе {{ r.open_now }}</small></div>
-  <div class="kpi"><span>Конверсия закрытых</span><b>{{ r.conv }} %</b><small>выполнено {{ r.won }}, отказ {{ r.lost }}</small></div>
-  <div class="kpi"><span>Первый ответ, медиана</span><b>{{ r.response }}</b><small>от обращения до первого действия</small></div>
+  <div class="kpi kpi--hero"><span>Выручка по выполненным</span><b>{{ r.won_sum|rub }}</b><small>{{ r.won }} {{ r.won|plural:"обращение,обращения,обращений" }}</small>
+    {% include "crm/_delta.html" with d=r.compare.won_sum %}</div>
+  <div class="kpi"><span>Обращений</span><b>{{ r.total }}</b><small>сейчас в работе {{ r.open_now }}</small>
+    {% include "crm/_delta.html" with d=r.compare.total %}</div>
+  <div class="kpi"><span>Конверсия закрытых</span><b>{{ r.conv }} %</b><small>выполнено {{ r.won }}, отказ {{ r.lost }}</small>
+    {% include "crm/_delta.html" with d=r.compare.conv %}</div>
+  <div class="kpi"><span>Первый ответ, медиана</span><b>{{ r.response }}</b><small>от обращения до первого действия</small>
+    {% include "crm/_delta.html" with d=r.compare.response %}</div>
   <div class="kpi{% if r.overdue_now %} kpi--alert{% endif %}"><span>Просрочено задач</span><b>{{ r.overdue_now }}</b><small>на сейчас, у всех</small></div>
 </section>
 
@@ -41,6 +45,7 @@
 <div class="report-grid">
   <section class="panel" aria-labelledby="src-h">
     <h2 id="src-h">Откуда приходят</h2>
+    <div class="table-scroll">
     <table class="table hbar-table">
       <thead><tr><th>Источник</th><th>Обращений</th><th class="num">Конверсия</th><th class="num">Выручка</th></tr></thead>
       <tbody>
@@ -54,22 +59,22 @@
         {% empty %}<tr><td colspan="4" class="muted">За период обращений нет</td></tr>{% endfor %}
       </tbody>
     </table>
+    </div>
   </section>
 
   <section class="panel" aria-labelledby="funnel-h">
     <h2 id="funnel-h">Воронка</h2>
-    <p class="muted small">Сколько обращений периода дошло до этапа</p>
-    <table class="table hbar-table">
-      <tbody>
-        {% for row in r.funnel %}
-          <tr>
-            <td>{{ row.label }}</td>
-            <td class="hbar-cell"><svg class="hbar" role="img" aria-label="{{ row.n }}, {{ row.share }} %"><title>{{ row.label }}: {{ row.n }} ({{ row.share }} %)</title>{% if row.bar_w %}<rect class="hbar__mark hbar__mark--funnel" x="0" y="4" width="{{ row.bar_w }}" height="12" rx="3"/>{% endif %}<text class="hbar__val" x="{{ row.label_x }}" y="14">{{ row.n }}</text></svg></td>
-            <td class="num">{{ row.share }} %</td>
-          </tr>
-        {% endfor %}
-      </tbody>
-    </table>
+    <p class="muted small">Сколько обращений периода дошло до этапа и какая доля перешла с предыдущего</p>
+    <ol class="funnel">
+      {% for row in r.funnel %}
+        <li class="funnel__row">
+          <span class="funnel__label"><i class="stage-mark stage-mark--{{ row.stage }}" aria-hidden="true"></i>{{ row.label }}</span>
+          <svg class="hbar hbar--funnel" role="img" aria-label="{{ row.n }}, {{ row.share }} % от всех"><title>{{ row.label }}: {{ row.n }} ({{ row.share }} % от всех)</title>{% if row.bar_w %}<rect class="stage-fill--{{ row.stage }}" x="0" y="3" width="{{ row.bar_w }}" height="16" rx="4"/>{% endif %}<text class="hbar__val" x="{{ row.label_x }}" y="15.5">{{ row.n }}</text></svg>
+          <span class="funnel__share">{{ row.share }} %</span>
+          {% if row.step is not None %}<span class="funnel__step{% if row.step < 50 %} is-low{% endif %}" title="Перешло с этапа выше">{{ row.step }} % с прошлого шага</span>{% else %}<span class="funnel__step">все обращения</span>{% endif %}
+        </li>
+      {% endfor %}
+    </ol>
   </section>
 </div>
 

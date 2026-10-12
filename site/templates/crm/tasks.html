@@ -15,8 +15,10 @@
 <div class="task-groups">
   {% for key, label, items in groups %}
     <section class="panel task-group task-group--{{ key }}" aria-labelledby="tg-{{ key }}">
-      <h2 id="tg-{{ key }}">{{ label }} <span class="muted">{{ items|length }}</span></h2>
-      {% include "crm/_tasks.html" with tasks=items show_client=True %}
+      <h2 id="tg-{{ key }}" class="task-group__head"><span>{{ label }}</span><span class="task-group__n">{{ items|length }}</span></h2>
+      {% if key == "overdue" %}{% include "crm/_tasks.html" with tasks=items show_client=True empty_text="Просроченных нет" %}
+      {% elif key == "today" %}{% include "crm/_tasks.html" with tasks=items show_client=True empty_text="На сегодня больше ничего" %}
+      {% else %}{% include "crm/_tasks.html" with tasks=items show_client=True %}{% endif %}
     </section>
   {% endfor %}
 </div>

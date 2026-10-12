@@ -1,4 +1,4 @@
-{% load static %}<!doctype html>
+{% load static crm %}<!doctype html>
 <html lang="ru">
 <head>
   <meta charset="utf-8">
@@ -46,10 +46,14 @@
     {% endif %}
   </nav>
   <div class="crm-me">
+    <span class="avatar" aria-hidden="true">{{ user|initials }}</span>
     <b>{{ user.get_full_name|default:user.username }}</b>
-    <a href="{% url 'catalog:home' %}">Сайт</a>
-    {% if user.is_staff %}<a href="{% url 'admin:index' %}">Админка</a>{% endif %}
-    <form method="post" action="{% url 'admin:logout' %}">{% csrf_token %}<button type="submit">Выйти</button></form>
+    <span class="crm-me__role">{% if can_report %}Руководитель{% else %}Менеджер{% endif %}</span>
+    <div class="crm-me__links">
+      <a href="{% url 'catalog:home' %}">Сайт</a>
+      {% if user.is_staff %}<a href="{% url 'admin:index' %}">Админка</a>{% endif %}
+      <form method="post" action="{% url 'admin:logout' %}">{% csrf_token %}<button type="submit">Выйти</button></form>
+    </div>
   </div>
 </aside>
 {% endwith %}

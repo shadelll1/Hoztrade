@@ -6,31 +6,47 @@
 {% block content %}
 <div class="deal">
   <div class="deal__main">
-    <section class="panel deal__head">
-      <div class="deal__meta">
-        <span class="tag-src tag-src--{{ deal.source }}">{{ deal.get_source_display }}</span>
-        <span class="muted">создано {{ deal.created_at|date:"j E Y, H:i" }}</span>
-        {% if deal.first_touch_at %}<span class="muted">первый ответ через {{ deal.created_at|timesince:deal.first_touch_at }}</span>
-        {% elif deal.is_open %}<span class="warn-pill">Ещё без ответа {{ deal.created_at|ago }}</span>{% endif %}
+    <section class="panel deal__head deal__head--{{ deal.stage }}">
+      <div class="deal__top">
+        <span class="src src--{{ deal.source }}">{{ deal.get_source_display }}</span>
+        {% if not deal.first_touch_at and deal.is_open %}<span class="wait wait--alert-chip">Ещё без ответа {{ deal.created_at|ago }}</span>{% endif %}
       </div>
       <h2 class="deal__title">{{ deal.title }}</h2>
-      {% if deal.amount %}<p class="deal__amount">{{ deal.amount|rub }}</p>{% endif %}
 
-      <form method="post" class="stages" aria-label="Этап обращения">
+      <dl class="facts">
+        <div><dt>Сумма</dt><dd class="facts__money">{% if deal.amount %}{{ deal.amount|rub }}{% else %}<span class="muted">не указана</span>{% endif %}</dd></div>
+        <div><dt>Менеджер</dt><dd>{% if deal.manager %}<span class="avatar avatar--sm" aria-hidden="true">{{ deal.manager|initials }}</span>{{ deal.manager.get_full_name|default:deal.manager.username }}{% else %}<span class="late">не назначен</span>{% endif %}</dd></div>
+        <div><dt>Создано</dt><dd title="{{ deal.created_at|date:'j E Y, H:i' }}">{{ deal.created_at|date:"j E, H:i" }}</dd></div>
+        <div><dt>Первый ответ</dt><dd>{% if deal.first_touch_at %}через {{ deal.created_at|timesince:deal.first_touch_at }}{% else %}<span class="late">ещё нет</span>{% endif %}</dd></div>
+        <div><dt>Следующая задача</dt><dd>{% if deal.next_task %}<span{% if deal.has_overdue %} class="late"{% endif %}>{{ deal.next_task|date:"j E, H:i" }}</span>{% else %}<span class="muted">нет</span>{% endif %}</dd></div>
+      </dl>
+
+      <form method="post" class="track" aria-label="Этап обращения">
         {% csrf_token %}<input type="hidden" name="action" value="stage">
-        {% for value, label in stages %}
-          <button class="stages__btn stages__btn--{{ value }}{% if deal.stage == value %} is-current{% endif %}" type="submit" name="stage" value="{{ value }}"
-                  {% if deal.stage == value %}aria-current="step" disabled{% endif %}{% if value == "lost" %} data-ask-reason{% endif %}>{{ label }}</button>
-        {% endfor %}
+        <ol class="track__steps">
+          {% for value, label in stages %}
+            {% if value != "lost" %}
+            <li class="track__step track__step--{{ value }}{% if deal.stage == value %} is-current{% elif value in passed %} is-passed{% endif %}">
+              <button type="submit" name="stage" value="{{ value }}" {% if deal.stage == value %}aria-current="step" disabled{% endif %}>
+                <i class="track__dot" aria-hidden="true"></i><span>{{ label }}</span>
+              </button>
+            </li>
+            {% endif %}
+          {% endfor %}
+        </ol>
+        <button class="track__lost{% if deal.stage == 'lost' %} is-current{% endif %}" type="submit" name="stage" value="lost" data-ask-reason {% if deal.stage == "lost" %}aria-current="step" disabled{% endif %}>{% if deal.stage == "lost" %}Отказ{% else %}Отказ…{% endif %}</button>
         <input type="hidden" name="reason" value="" data-reason>
       </form>
-      {% if deal.stage == "lost" and deal.lost_reason %}<p class="muted">Причина отказа: {{ deal.lost_reason }}</p>{% endif %}
+      {% if deal.stage == "lost" and deal.lost_reason %}<p class="deal__reason">Причина отказа: <b>{{ deal.lost_reason }}</b></p>{% endif %}
     </section>
 
     <section class="panel client-box" aria-labelledby="client-h">
       <div class="client-box__head">
-        <h2 id="client-h"><a href="{{ deal.client.get_absolute_url }}">{{ deal.client.name }}</a></h2>
-        {% if deal.client.company %}<span class="muted">{{ deal.client.company }}{% if deal.client.inn %}, ИНН {{ deal.client.inn }}{% endif %}</span>{% endif %}
+        <span class="mono" aria-hidden="true">{{ deal.client|monogram }}</span>
+        <div>
+          <h2 id="client-h"><a href="{{ deal.client.get_absolute_url }}">{{ deal.client.name }}</a></h2>
+          {% if deal.client.company %}<span class="muted">{{ deal.client.company }}{% if deal.client.inn %}, ИНН {{ deal.client.inn }}{% endif %}</span>{% endif %}
+        </div>
       </div>
       <div class="client-box__contacts">
         {% if deal.client.phone %}<a class="btn btn--dark" href="tel:{{ deal.client.phone }}">

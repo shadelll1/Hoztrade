@@ -7,7 +7,7 @@ from django.contrib.auth.views import redirect_to_login
 from django.core.exceptions import PermissionDenied
 from django.core.paginator import Paginator
 from django.db import transaction
-from django.db.models import Count, Exists, Max, Min, OuterRef, Q, Sum
+from django.db.models import Count, Exists, Max, Min, OuterRef, Q, Subquery, Sum
 from django.http import FileResponse, Http404, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
@@ -23,6 +23,7 @@ from .forms import ClientForm, DealEditForm, NewDealForm, NoteForm, TaskForm
 from .models import Activity, Client, Deal, Task
 
 BOARD_CLOSED_DAYS = 14   # выполненные и отказы на доске — за последние две недели
+WAIT_WARN, WAIT_ALERT = 15, 60   # минут без ответа: дольше — карточка желтеет, затем краснеет
 
 
 def crm_view(view):
@@ -81,6 +82,9 @@ def board(request):
         qs = qs.filter(manager__isnull=True)
     if source in Deal.Source.values:
         qs = qs.filter(source=source)
+    only = request.GET.get("only", "")
+    if only == "wait":
+        qs = qs.filter(stage__in=Deal.OPEN, first_touch_at__isnull=True)
     if q:
         digits = "".join(ch for ch in q if ch.isdigit())
         match = (Q(client__name__icontains=q) | Q(client__company__icontains=q) | Q(title__icontains=q)
@@ -92,16 +96,52 @@ def board(request):
     since = timezone.now() - timedelta(days=BOARD_CLOSED_DAYS)
     qs = qs.filter(Q(stage__in=Deal.OPEN) | Q(closed_at__gte=since))
 
-    columns = []
+    now = timezone.now()
     deals = list(qs.order_by("-created_at")[:600])
+    for d in deals:
+        # Сколько клиент ждёт первого ответа — цвет карточки по сроку
+        d.wait_min = int((now - d.created_at).total_seconds() // 60) if d.is_open and not d.first_touch_at else None
+        d.wait_level = ("" if d.wait_min is None else "alert" if d.wait_min >= WAIT_ALERT
+                        else "warn" if d.wait_min >= WAIT_WARN else "fresh")
+
+    open_sum = sum((d.amount for d in deals if d.is_open), 0)
+    columns = []
     for value, label in Deal.Stage.choices:
         items = [d for d in deals if d.stage == value]
-        columns.append({"stage": value, "label": label, "deals": items,
-                        "sum": sum((d.amount for d in items), 0), "closed": value in Deal.CLOSED})
+        total = sum((d.amount for d in items), 0)
+        share = round(100 * float(total) / float(open_sum), 1) if value in Deal.OPEN and open_sum else 0
+        columns.append({"stage": value, "label": label, "deals": items, "sum": total,
+                        "closed": value in Deal.CLOSED, "share": share,
+                        "share_w": f"{max(share, 1.5)}%" if share else ""})
     return _page(request, "crm/board.html", {
-        "columns": columns, "who": who, "source": source, "q": q, "sources": Deal.Source.choices,
+        "columns": columns, "who": who, "source": source, "q": q, "only": only, "sources": Deal.Source.choices,
         "closed_days": BOARD_CLOSED_DAYS, "who_choices": [("all", "Все"), ("me", "Мои"), ("none", "Без менеджера")],
+        "summary": _summary(request.user, who, deals, now),
     })
+
+
+def _summary(user, who, deals, now):
+    """Табло над воронкой: кто ждёт ответа, задачи (просрочено, на сегодня), деньги в работе и выполненные.
+    Цифры по обращениям — по тем же фильтрам, что и доска; задачи — мои при «Мои», иначе всех."""
+    waiting = [d for d in deals if d.wait_min is not None]
+    tasks = Task.objects.filter(done_at__isnull=True)
+    if who == "me":
+        tasks = tasks.filter(assignee=user)
+    day_end = timezone.localtime(now).replace(hour=23, minute=59, second=59)
+    open_deals = [d for d in deals if d.is_open]
+    won = [d for d in deals if d.stage == Deal.Stage.WON]
+    return {
+        "wait": len(waiting),
+        "wait_long": sum(1 for d in waiting if d.wait_min >= WAIT_ALERT),
+        "wait_oldest": max(waiting, key=lambda d: d.wait_min).created_at if waiting else None,
+        "overdue": tasks.filter(due_at__lt=now).count(),
+        "today": tasks.filter(due_at__gte=now, due_at__lte=day_end).count(),
+        "open": len(open_deals),
+        "open_sum": sum((d.amount for d in open_deals), 0),
+        "won": len(won),
+        "won_sum": sum((d.amount for d in won), 0),
+        "tasks_who": "me" if who == "me" else "all",
+    }
 
 
 @crm_view
@@ -147,8 +187,14 @@ def deal_detail(request, pk):
     activities = deal.activities.select_related("author")
     tasks = deal.tasks.select_related("assignee").order_by("done_at", "due_at")
     other_deals = deal.client.deals.exclude(pk=deal.pk).order_by("-created_at")[:6]
+    # Пройденные этапы на дорожке: до текущего, а для отказа — те, до которых дошли по истории
+    path = [s for s in services.STAGE_ORDER if s != Deal.Stage.LOST]
+    if deal.stage in path:
+        passed = path[:path.index(deal.stage)]
+    else:
+        passed = {Deal.Stage.NEW} | set(activities.filter(kind=Activity.Kind.STAGE).values_list("stage", flat=True))
     return _page(request, "crm/deal.html", {
-        "deal": deal, "activities": activities, "tasks": tasks, "other_deals": other_deals,
+        "deal": deal, "activities": activities, "tasks": tasks, "other_deals": other_deals, "passed": passed,
         "note_form": note_form, "task_form": task_form, "edit_form": edit_form,
         "items": deal.order.items.all() if deal.order_id else [],
     })
@@ -233,7 +279,17 @@ def clients(request):
         if len(digits) >= 4:
             match |= Q(phone__contains=digits[-10:])
         qs = qs.filter(match)
+    last = Deal.objects.filter(client=OuterRef("pk")).order_by("-created_at")
+    qs = qs.annotate(last_stage=Subquery(last.values("stage")[:1]), open_n=Count(
+        "deals", filter=Q(deals__stage__in=Deal.OPEN), distinct=True))
     page = Paginator(qs.order_by("-last_at", "name"), 50).get_page(request.GET.get("page"))
+    # Полоса «купил на» — относительно самого крупного покупателя на странице
+    top = max((c.won_sum or 0 for c in page.object_list), default=0)
+    stage_labels = dict(Deal.Stage.choices)
+    for c in page.object_list:
+        pct = round(100 * float(c.won_sum) / float(top), 1) if c.won_sum and top else 0
+        c.bar_w = f"{max(pct, 2)}%" if pct else ""
+        c.last_stage_label = stage_labels.get(c.last_stage, "")
     return _page(request, "crm/clients.html", {"page": page, "q": q})
 
 

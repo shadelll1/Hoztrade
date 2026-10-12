@@ -39,6 +39,29 @@ def _conv(won, total):
     return round(100 * won / total) if total else 0
 
 
+def _delta(now, before, kind, lower_is_better=False):
+    """Сравнение с прошлым периодом: текст («+12 %», «−3 п. п.», «на 20 мин быстрее») и хорошо ли это.
+    None — сравнивать не с чем (в прошлом периоде данных нет)."""
+    if before is None or now is None:
+        return None
+    if kind == "pct":
+        if not before:
+            return None
+        change = round(100 * (float(now) - float(before)) / float(before))
+        text = "без изменений" if change == 0 else f"{'+' if change > 0 else '−'}{abs(change)} %"
+    elif kind == "pt":
+        change = now - before
+        text = "без изменений" if change == 0 else f"{'+' if change > 0 else '−'}{abs(change)} п. п."
+    else:
+        change = round(now - before)
+        if change == 0:
+            text = "так же"
+        else:
+            text = f"на {duration(abs(change))} {'медленнее' if change > 0 else 'быстрее'}"
+    good = None if change == 0 else (change < 0) == lower_is_better
+    return {"text": text, "good": good, "up": change > 0}
+
+
 def _hbars(rows, key, width=78):
     """Горизонтальные столбики одной серии: длина в % ширины ячейки (до width %), справа — подпись значения.
     Проценты, а не viewBox: текст подписи не масштабируется вместе со столбиком."""
@@ -139,7 +162,9 @@ def build(days=30):
     for stage in FUNNEL:
         idx = STAGES.index(stage)
         n = sum(1 for d in deals if any(STAGES.index(s) >= idx for s in reached[d.pk] if s != Deal.Stage.LOST))
-        funnel.append({"label": Deal.Stage(stage).label, "n": n, "share": _conv(n, len(deals))})
+        step = _conv(n, funnel[-1]["n"]) if funnel else None   # дошло от предыдущего этапа
+        funnel.append({"label": Deal.Stage(stage).label, "stage": stage, "n": n, "share": _conv(n, len(deals)),
+                       "step": step})
     _hbars(funnel, "n")
 
     reasons = {}
@@ -147,9 +172,22 @@ def build(days=30):
         key = d.lost_reason or "Причина не указана"
         reasons[key] = reasons.get(key, 0) + 1
 
+    # Прошлый период той же длины — для сравнения в плитках
+    prev = list(Deal.objects.filter(created_at__gte=start - timedelta(days=days), created_at__lt=start))
+    p_won = [d for d in prev if d.stage == Deal.Stage.WON]
+    p_lost = [d for d in prev if d.stage == Deal.Stage.LOST]
+    conv = _conv(len(won), len(won) + len(lost))
+    response_min = _minutes(deals)
+    compare = {
+        "won_sum": _delta(won_sum, sum((d.amount for d in p_won), Decimal(0)), "pct"),
+        "total": _delta(len(deals), len(prev), "pct"),
+        "conv": _delta(conv, _conv(len(p_won), len(p_won) + len(p_lost)) if p_won or p_lost else None, "pt"),
+        "response": _delta(response_min, _minutes(prev), "time", lower_is_better=True),
+    }
+
     return {
         "start": start, "total": len(deals), "won": len(won), "won_sum": won_sum, "lost": len(lost),
-        "conv": _conv(len(won), len(won) + len(lost)), "response": duration(_minutes(deals)),
+        "conv": conv, "response": duration(response_min), "compare": compare, "days": days,
         "open_now": Deal.objects.filter(stage__in=Deal.OPEN).count(),
         "overdue_now": sum(overdue.values()),
         "by_source": by_source, "by_manager": by_manager, "funnel": funnel,

@@ -215,3 +215,50 @@ def test_reports_numbers(head):
     assert r["response"] == "30 мин" and r["reasons"] == [("Дорого", 1)]
     assert {row["label"]: row["n"] for row in r["by_source"]} == {"Обратный звонок": 2, "Другое": 1}
     assert r["funnel"][0]["n"] == 3 and r["funnel"][-1]["n"] == 1
+
+
+@pytest.mark.django_db
+def test_board_summary_and_waiting_filter(client, manager):
+    c = Client.objects.create(name="Иван")
+    now = timezone.now()
+    old = Deal.objects.create(client=c, title="Ждёт давно", created_at=now - timedelta(hours=3))
+    Deal.objects.create(client=c, title="Свежее", created_at=now - timedelta(minutes=5))
+    Deal.objects.create(client=c, title="Ответили", stage=Deal.Stage.CONTACT, amount=5000, manager=manager,
+                        first_touch_at=now)
+    Deal.objects.create(client=c, title="Продано", stage=Deal.Stage.WON, amount=7000, closed_at=now,
+                        first_touch_at=now)
+    Task.objects.create(client=c, title="Перезвонить", assignee=manager, due_at=now - timedelta(hours=1))
+    client.force_login(manager)
+    r = client.get("/crm/")
+    s = r.context["summary"]
+    assert (s["wait"], s["wait_long"], s["overdue"], s["open"], s["open_sum"]) == (2, 1, 1, 3, 5000)
+    assert s["won"] == 1 and s["won_sum"] == 7000 and s["wait_oldest"] == old.created_at
+    card = next(d for col in r.context["columns"] for d in col["deals"] if d.pk == old.pk)
+    assert card.wait_level == "alert"
+    contact = next(col for col in r.context["columns"] if col["stage"] == "contact")
+    assert contact["share"] == 100.0
+    waiting = [d.title for col in client.get("/crm/", {"only": "wait"}).context["columns"] for d in col["deals"]]
+    assert sorted(waiting) == ["Ждёт давно", "Свежее"]
+
+
+@pytest.mark.django_db
+def test_reports_compare_with_previous_period(head):
+    c = Client.objects.create(name="Иван")
+    now = timezone.now()
+    Deal.objects.create(client=c, title="Раньше", stage=Deal.Stage.WON, amount=1000,
+                        created_at=now - timedelta(days=40))
+    for title in ("1", "2"):
+        Deal.objects.create(client=c, title=title, stage=Deal.Stage.WON, amount=1500, created_at=now)
+    r = reports.build(30)
+    assert r["compare"]["won_sum"] == {"text": "+200 %", "good": True, "up": True}
+    assert r["compare"]["total"]["text"] == "+100 %"
+    assert r["compare"]["response"] is None   # первых ответов нет — сравнивать не с чем
+    assert r["funnel"][0]["step"] is None and r["funnel"][1]["step"] == 100
+
+
+def test_monogram():
+    from crm.templatetags.crm import monogram
+    assert monogram("Сергей Иванов") == "СИ"
+    assert monogram("ООО «СтройМонтаж» (демо)") == "СМ"
+    assert monogram("ИП Васильев") == "ВА"
+    assert monogram("") == "?"
