@@ -35,6 +35,7 @@ def test_per_kg_only_for_packed_goods():
     assert per_kg(bag) == "10,40 ₽/кг"
     assert per_kg(bag, Decimal("485")) == "9,70 ₽/кг"
     assert per_kg(Product(unit="шт", weight_kg=Decimal("3.6"), price_retail=Decimal("21"))) == ""
+    assert per_kg(Product(unit="упак", weight_kg=Decimal("17.5"), price_retail=Decimal("1390"))) == ""   # ламинат
     assert per_kg(Product(unit="мешок", weight_kg=Decimal("0"), price_retail=Decimal("100"))) == ""
 
 
