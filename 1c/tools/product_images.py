@@ -1,604 +1,385 @@
-"""Картинки демо-товаров: фото с Pixabay (Pixabay Content License — можно на коммерческом сайте без указания
-автора)
-и рисунки в едином стиле для фасованного товара (мешки, вёдра, баллоны), где фото «безымянной» упаковки
-вводило бы в заблуждение, и для редких товаров, которых на фотобанке нет.
+"""Товарные картинки 299 демо-товаров: единый «студийный» вид — товар на белом фоне с мягкой тенью, 1000×1000.
 
-Результат — папка 1c/demo-images/<артикул>.jpg (800×800) и credits.json (откуда каждое фото). В 1С:
-раздел «Сайт» → «Загрузить картинки товаров из папки», затем «Выгрузить каталог на сайт».
+Два источника:
+  * фото со стоков (Pixabay Content License, Openverse CC0/PD) — для изделий, которые там есть в нормальном виде
+    (смесители, инструмент, крепёж). Фон вырезается нейросетью ISNet (onnxruntime, модель — в .image-cache),
+    товар ставится в кадр по общим правилам;
+  * рисунки (packshot_items, packshot_goods) — для фасовки и материалов, которых на стоках нет: мешки, вёдра,
+    листы, трубы, профиль, кровля, печное литьё. Этикетка — текст из названия товара, без чужих логотипов.
 
-  python 1c/tools/product_images.py search   — кандидаты с Pixabay и листы для выбора (ключ — 1c/tools/.pixabay-key)
-  python 1c/tools/product_images.py build    — собрать картинки по выбору (CHOICES) и рисункам
+Результат — 1c/demo-images/<артикул>.jpg и credits.json. В 1С: «Сайт» → «Загрузить картинки товаров из папки».
+
+Окружение (одно на инструменты картинок): python -m venv 1c/tools/.venv-images,
+pip install onnxruntime pillow numpy; модель isnet-general-use.onnx — в 1c/tools/.image-cache/models.
+
+  python 1c/tools/product_images.py                 — все товары
+  python 1c/tools/product_images.py ЦМ- ПН-С8       — только артикулы с такими началами
+  python 1c/tools/product_images.py --sheet out.jpg — плюс контрольный лист всех картинок
 """
 import io
 import json
+import math
 import re
 import sys
-import tempfile
-import textwrap
-import time
-import urllib.parse
 import urllib.request
 from pathlib import Path
 
+import numpy as np
 from PIL import Image, ImageDraw, ImageFilter, ImageFont, ImageOps
+
+import packshot_goods as g
+import packshot_items as it
 
 TOOLS = Path(__file__).resolve().parent
 OUT = TOOLS.parent / "demo-images"
-# Скачанное с фотобанка — во временную папку, не в проект
-CACHE = Path(tempfile.gettempdir()) / "hoztrade-pixabay"
-FONTS = Path("C:/Windows/Fonts")
-SIZE = 800
-CANDIDATES = 8
+CACHE = TOOLS / ".image-cache"
+SIZE = 1000
 
-# Понятие картинки -> запрос к Pixabay. Один снимок может подходить нескольким товарам (брус разных сечений).
-PHOTO = {
-    "brick-red": "red bricks stack",
-    "brick-yellow": "yellow bricks",
-    "brick-brown": "brown brick stack",
-    "brick-white": "white silicate bricks",
-    "aerated-block": "gas concrete block",
-    "foam-block": "concrete blocks stack",
-    "clay-block": "cinder blocks",
-    "beam": "wooden beams lumber",
-    "board": "wooden planks lumber stack",
-    "batten": "wooden slats",
-    "paneling": "wood paneling wall",
-    "plywood": "plywood sheets",
-    "osb": "osb board",
-    "profnastil-red": "red corrugated metal sheet",
-    "profnastil-green": "green corrugated metal roof",
-    "profnastil-brown": "brown metal roof",
-    "profnastil-zinc": "galvanized corrugated sheet",
-    "metal-tile-red": "red metal roof tiles",
-    "metal-tile-green": "green metal roof",
-    "metal-tile-brown": "brown metal roof tiles",
-    "ondulin-brown": "corrugated roof brown",
-    "ondulin-green": "green corrugated roof",
-    "ondulin-red": "red corrugated roof",
-    "gutter": "rain gutter",
-    "downpipe": "downspout",
-    "mineral-wool": "mineral wool insulation",
-    "xps": "insulation panels",
-    "eps": "polystyrene insulation",
-    "drywall": "plasterboard",
-    "metal-profile": "metal studs drywall",
-    "pp-pipe": "plastic water pipes",
-    "sewer-pipe": "pvc pipes",
-    "pp-fitting": "plastic pipe fittings",
-    "sewer-fitting": "pvc pipe fittings",
-    "ball-valve": "ball valve",
-    "pipe-coil": "plastic pipe coil",
-    "flex-hose": "braided hose",
-    "faucet-kitchen": "kitchen faucet",
-    "faucet-kitchen-black": "black kitchen faucet",
-    "faucet-bath": "bathtub faucet",
-    "faucet-sink": "bathroom faucet chrome",
-    "shower": "shower head",
-    "shower-hose": "shower hose",
-    "water-heater": "electric boiler",
-    "toilet": "white toilet bathroom",
-    "sink": "white bathroom sink",
-    "bathtub": "white bathtub",
-    "siphon": "sink drain pipe",
-    "radiator": "white radiator",
-    "pump": "circulation pump heating",
-    "expansion-tank": "expansion vessel heating",
-    "laminate-oak": "oak laminate floor",
-    "laminate-grey": "grey wood floor",
-    "laminate-walnut": "walnut wood floor",
-    "laminate-white": "white oak floor",
-    "laminate-honey": "honey oak floor",
-    "laminate-ash": "light wood floor",
-    "laminate-smoked": "smoked oak floor",
-    "laminate-dark": "dark wood floor",
-    "laminate-pine": "pine wood floor",
-    "laminate-scandi": "scandinavian wood floor",
-    "laminate-wenge": "wenge dark wood",
-    "laminate-concrete": "concrete floor texture",
-    "cork": "cork texture",
-    "baseboard": "baseboard floor",
-    "linoleum-wood": "vinyl wood floor",
-    "linoleum-tile": "grey tile floor",
-    "linoleum-grey": "grey vinyl floor",
-    "polycarbonate": "polycarbonate sheet",
-    "polycarbonate-color": "greenhouse polycarbonate",
-    "greenhouse": "greenhouse frame",
-    "stove-door": "cast iron stove door",
-    "grate": "fire grate",
-    "stove-top": "cast iron stove top",
-    "fire-brick": "refractory bricks",
-    "chimney": "stainless steel chimney pipe",
-    "paint-white": "white paint bucket",
-    "sealant": "caulk",
-    "liquid-nails": "silicone gun",
-    "wood-screws": "wood screws",
-    "roof-screws": "roofing screws",
-    "metal-screws": "self tapping screws",
-    "wall-plugs": "wall plugs",
-    "anchor": "anchor bolts",
-    "nails": "iron nails",
-    "bracket": "angle bracket",
-    "perforated-tape": "perforated metal strip",
-    "pipe-clamp": "pipe clamp",
-    "threaded-rod": "threaded rod",
-    "putty-knife": "plastering trowel",
-    "level": "spirit level",
-    "wheelbarrow": "wheelbarrow",
-    "trowel": "brick trowel",
-    "straightedge": "aluminum level tool",
-    "paint-roller": "paint roller",
-    "paint-brush": "paint brush",
-    "tape-measure": "tape measure",
-    "utility-knife": "utility knife",
-    "shovel": "shovel",
-    "gloves": "work gloves",
-    "mixer-paddle": "mixing mortar",
-    "drill": "cordless drill",
-    "hammer-drill": "hammer drill",
-    "grinder": "angle grinder",
-    "jigsaw": "jigsaw power tool",
-    "mixer": "mortar mixer drill",
-    "cutting-disc": "cutting disc",
-}
+# ---------------------------------------------------------------------------------------------------------
+# Что рисуем или чьё фото берём. Артикул (регулярное выражение, первое совпадение) -> действие.
+# ("photo", "понятие:код"[, кадр[, стереть]]) — кандидат из листов stock_search.py; кадр (x0, y0, x1, y1) — часть
+# снимка в долях ширины/высоты, стереть — прямоугольники (в долях кадра), которые убрать из маски товара;
+# иначе — функция рисунка (sku, name) -> Image.
 
-# Артикул (регулярное выражение, первое совпадение) -> понятие из PHOTO или рисунок ("draw:<вид>").
+RAL = {"3005": "#5e2129", "6005": "#1f4a36", "8017": "#45322e", "ОЦ": "#b9c0c7"}
+PC = {"П": "#e2f0f7", "Б": "#c69c5d", "З": "#8fcf9a", "С": "#7fb3e6"}
+
+
+def kg_of(name):
+    m = re.search(r"(\d+(?:[,.]\d+)?)\s*кг", name)
+    return float(m.group(1).replace(",", ".")) if m else 25
+
+
+def mm(name, n=0):
+    return [float(x.replace(",", ".")) for x in re.findall(r"(\d+(?:,\d+)?)", name)][n]
+
+
+def pc_color(sku):
+    m = re.search(r"\d+([ПБЗС])", sku)
+    return PC[m.group(1)] if m else PC["П"]
+
+
 RULES = [
-    # Фасованные смеси — рисунок мешка с названием и весом
-    (r"^(ЦМ|ПБ-|КС-|ПС-|КРЗ|ЩБ|ШТ-|ШП-(КМ|КФ|ВШ|ПФ|ФЦ)|КЛ-(CM|Ю)|НП-|ГИ-ОБ|ПЛ-СП|ПЛ-ГЛ|ЗТ-)", "draw:bag"),
-    (r"^(ШП-ШР|ГР-БК|ГИ-МБ|ИН-ВД)", "draw:bucket"),
-    (r"^(ГР-ГП|ГР-CT17|ГИ-ПР|АС-)", "draw:canister"),
-    (r"^ЭМ-", "draw:can"),
-    (r"^(ПН-МП|ПН-МБ|ПН-ОЧ)", "draw:spray"),
-    (r"^(ГМ-75|ГМ-СД|ИЗ-|УТ-ФЛ|ЛН-ПИ|ЛН-СРП|ГИ-ЛН|ПД-XPS|ПД-ХВ|ПЛ-ШН)", "draw:roll"),
-    (r"^(ПГП|ПР-ПДВ|ПР-КРБ|ПК-ТШ|ПК-НП|ПК-UP|ОН-ГВ|ОН-КН|КР-ГКЛ|ПЛТ-УГ|ПРГ-|ВН-ПР|СФ-ИНС|РД-КМ|ПЛ-ЗВ|ПЛ-ВК|ПЛ-ДШ|ДМ-ХМ)", "draw:part"),
-    # Фото
-    (r"^КР-П-|^КР-О-175", "brick-red"),
-    (r"^КР-О-Ж", "brick-yellow"),
-    (r"^КР-О-К", "brick-brown"),
-    (r"^КР-С-", "brick-white"),
-    (r"^ГБ-", "aerated-block"),
-    (r"^ПБЛ-", "foam-block"),
-    (r"^КЕБ-", "clay-block"),
-    (r"^БР(-|\d)", "beam"),
-    (r"^БРС-", "batten"),
-    (r"^ДС-", "board"),
-    (r"^ВГ-", "paneling"),
-    (r"^ФН-", "plywood"),
-    (r"^ОСП-", "osb"),
-    (r"^ПН-С\d+-(2|3005)", "profnastil-red"),
-    (r"^ПН-С\d+-6005", "profnastil-green"),
-    (r"^ПН-С\d+-8017", "profnastil-brown"),
-    (r"^ПН-С\d+-ОЦ", "profnastil-zinc"),
-    (r"^МЧ-М-(045|8017)", "metal-tile-brown"),
-    (r"^МЧ-М-3005", "metal-tile-red"),
-    (r"^МЧ-М-6005", "metal-tile-green"),
-    (r"^ОН-2000-З", "ondulin-green"),
-    (r"^ОН-2000-К", "ondulin-red"),
-    (r"^ОН-2000", "ondulin-brown"),
-    (r"^КР-СК-", "roof-screws"),
-    (r"^ВД-Ж", "gutter"),
-    (r"^ВД-Т", "downpipe"),
-    (r"^МВ-", "mineral-wool"),
-    (r"^ПП-", "xps"),
-    (r"^ППС", "eps"),
-    (r"^ГКЛ", "drywall"),
-    (r"^ПР-", "metal-profile"),
-    (r"^ТР-PP", "pp-pipe"),
-    (r"^ТР-К-", "sewer-pipe"),
-    (r"^ТР-МП", "pipe-coil"),
-    (r"^ФТ-(У|МФ)", "pp-fitting"),
-    (r"^ФТ-", "sewer-fitting"),
-    (r"^КШ-", "ball-valve"),
-    (r"^ПВ-ГБ", "flex-hose"),
-    (r"^СМ-К-05", "faucet-kitchen-black"),
-    (r"^СМ-К-", "faucet-kitchen"),
-    (r"^СМ-(В|ТС)-", "faucet-bath"),
-    (r"^СМ-Р-", "faucet-sink"),
-    (r"^(СМ-Д|ДШ-ЛК)", "shower"),
-    (r"^ДШ-ШЛ", "shower-hose"),
-    (r"^ВН-", "water-heater"),
-    (r"^СФ-УН", "toilet"),
-    (r"^СФ-(РК|ПД)", "sink"),
-    (r"^СФ-ВН", "bathtub"),
-    (r"^СФ-СФ", "siphon"),
-    (r"^РД-(БМ|АЛ)", "radiator"),
-    (r"^РД-НС", "pump"),
-    (r"^РД-БК", "expansion-tank"),
-    (r"^ЛМ-33-ДН", "laminate-oak"),
-    (r"^ЛМ-(32-ДС|ВЛ-ДС)", "laminate-grey"),
-    (r"^ЛМ-34-ОР", "laminate-walnut"),
-    (r"^ЛМ-32-ДБ", "laminate-white"),
-    (r"^ЛМ-32-ДМ", "laminate-honey"),
-    (r"^ЛМ-32-ЯС", "laminate-ash"),
-    (r"^ЛМ-33-ДД", "laminate-smoked"),
-    (r"^ЛМ-33-ОТ", "laminate-dark"),
-    (r"^ЛМ-33-СС", "laminate-pine"),
-    (r"^ЛМ-34-ДС", "laminate-scandi"),
-    (r"^ЛМ-34-ВН", "laminate-wenge"),
-    (r"^ЛМ-ВЛ-БТ", "laminate-concrete"),
-    (r"^ПД-ПРБ", "cork"),
-    (r"^ПЛТ-", "baseboard"),
-    (r"^ЛН-Б-ДС|^ЛН-ПК", "linoleum-wood"),
-    (r"^ЛН-Б-ПС", "linoleum-tile"),
-    (r"^ЛН-К", "linoleum-grey"),
-    (r"^ПК-С-\d+(П|-12)?$", "polycarbonate"),
-    (r"^ПК-С-", "polycarbonate-color"),
-    (r"^ПК-М-", "polycarbonate"),
-    (r"^ТП-", "greenhouse"),
-    (r"^ПЛ-(ДТ|ДП)", "stove-door"),
-    (r"^ПЛ-(РД|РУ)", "grate"),
-    (r"^ПЛ-П\d", "stove-top"),
-    (r"^ПЛ-ША", "fire-brick"),
-    (r"^ДМ-", "chimney"),
-    (r"^КРС-", "paint-white"),
-    (r"^ГМ-(СС|СУ|АК)", "sealant"),
-    (r"^КЛ-ЖГ", "liquid-nails"),
-    (r"^КР-СД", "wood-screws"),
-    (r"^КР-СМ", "metal-screws"),
-    (r"^КР-(ДГ|ДР)", "wall-plugs"),
-    (r"^КР-АБ", "anchor"),
-    (r"^КР-ГВ", "nails"),
-    (r"^КР-УГ", "bracket"),
-    (r"^КР-ЛП", "perforated-tape"),
-    (r"^КР-ХТ", "pipe-clamp"),
-    (r"^КР-ШП", "threaded-rod"),
-    (r"^ИН-ШП", "putty-knife"),
-    (r"^ИН-УР", "level"),
-    (r"^ИН-ТЧ", "wheelbarrow"),
-    (r"^ИН-КЛ", "trowel"),
-    (r"^ИН-ПР-", "straightedge"),
-    (r"^ИН-ВЛ", "paint-roller"),
-    (r"^ИН-КС", "paint-brush"),
-        (r"^ИН-РЛ", "tape-measure"),
-    (r"^ИН-НЖ", "utility-knife"),
-    (r"^ИН-ЛП", "shovel"),
-    (r"^ИН-ПРЧ", "gloves"),
-    (r"^ИН-МКС", "mixer-paddle"),
-    (r"^ЭИ-ДШ", "drill"),
-    (r"^ЭИ-ПФ", "hammer-drill"),
-    (r"^ЭИ-УШМ", "grinder"),
-    (r"^ЭИ-ЛБ", "jigsaw"),
-    (r"^ЭИ-МКС", "mixer"),
-    (r"^ЭИ-КР", "cutting-disc"),
+    # Фасовка
+    (r"^(ГР-БК|ШП-ШР|КРС-)", lambda s, n: it.bucket(n)),
+    (r"^ГИ-МБ", lambda s, n: it.bucket(n, white_lid=False, color="#2b2e33")),
+    (r"^(ГР-ГП|ГР-CT17|АС-|ГИ-ПР)", lambda s, n: it.canister(n)),
+    (r"^ЭМ-", lambda s, n: it.paint_can(n)),
+    (r"^ПН-(МП|МБ|ОЧ)", lambda s, n: it.aerosol(n, color={"ПН-МП": "#e8590c", "ПН-МБ": "#f08c00",
+                                                       "ПН-ОЧ": "#5f3dc4"}[s[:5]], straw=s.startswith("ПН-МБ"))),
+    (r"^(ГМ-СС|ГМ-СУ|ГМ-АК|КЛ-ЖГ)", lambda s, n: it.cartridge(n)),
+    (r"^(ГМ-75|ГМ-СД|ИЗ-)", lambda s, n: it.roll(n, color="#eef1f4")),
+    (r"^(ГИ-ЛН|ЛН-ПИ)", lambda s, n: it.tape_roll(n, color="#9aa3ad" if s.startswith("ГИ") else "#e9ecef")),
+    (r"^ЛН-СРП", lambda s, n: it.tape_roll(n, color="#f1f3f5", mesh=True)),
+    (r"^(ЦМ|ПБ-|КС-|ПС-|КРЗ|ЩБ|ШТ-|ШП-|КЛ-(CM|Ю)|НП-|ГИ-ОБ|ПЛ-СП|ПЛ-ГЛ|ЗТ-)", lambda s, n: it.bag(n, kg_of(n))),
+    # Кладка
+    (r"^КР-П-", lambda s, n: g.bricks("#a9472a")),
+    (r"^КР-О-175", lambda s, n: g.bricks("#b9532e")),
+    (r"^КР-О-Ж", lambda s, n: g.bricks("#d7b36a")),
+    (r"^КР-О-К", lambda s, n: g.bricks("#6e4430")),
+    (r"^КР-С-", lambda s, n: g.bricks("#e4e1d8", size=(0.25, 0.088, 0.12))),
+    (r"^ГБ-", lambda s, n: g.blocks("aerated", (0.6, 0.3, mm(n, 3) / 1000))),
+    (r"^ПБЛ-", lambda s, n: g.blocks("foam", (0.6, 0.3, 0.2))),
+    (r"^КЕБ-", lambda s, n: g.blocks("keramzit", (0.39, 0.188, 0.19))),
+    (r"^ПГП-80В", lambda s, n: g.blocks("pgp-green", (0.667, 0.5, 0.08))),
+    (r"^ПГП-", lambda s, n: g.blocks("pgp", (0.667, 0.5, 0.08))),
+    (r"^ПЛ-ША", lambda s, n: g.fireclay_bricks()),
+    # Пиломатериалы и листы
+    (r"^БРС-", lambda s, n: g.lumber((0.03, 0.04), 1.6, 6)),
+    (r"^БР-50", lambda s, n: g.lumber((0.05, 0.05), 1.6, 4)),
+    (r"^БР-", lambda s, n: g.lumber((mm(n, 0) / 1000, mm(n, 1) / 1000), 1.6, 3)),
+    (r"^ДС-", lambda s, n: g.lumber((mm(n, 1) / 1000, mm(n, 0) / 1000), 1.6, 4)),
+    (r"^ВГ-", lambda s, n: g.paneling()),
+    (r"^ФН-", lambda s, n: g.sheet_stack("plywood", 1.525, 1.525, mm(n, 2) / 1000 * 3, 5)),
+    (r"^ОСП-", lambda s, n: g.sheet_stack("osb", 2.5, 1.25, mm(n, 1) / 1000 * 2, 5)),
+    (r"^ГКЛВ", lambda s, n: g.sheet_stack("gklv")),
+    (r"^ГКЛО", lambda s, n: g.sheet_stack("gklo")),
+    (r"^ГКЛ-", lambda s, n: g.sheet_stack("gkl")),
+    (r"^ПП-", lambda s, n: g.sheet_stack("xps", 1.2, 0.6, 0.05 if "50" in s else 0.04, 6)),
+    (r"^ППС", lambda s, n: g.sheet_stack("eps", 1.0, 1.0, 0.05, 5)),
+    (r"^МВ-", lambda s, n: g.wool_pack(n, "#dfe9d8")),
+    (r"^УТ-ФЛ", lambda s, n: g.foil_roll(n)),
+    # Кровля
+    (r"^ПН-С8-", lambda s, n: g.corrugated(RAL[s.split("-")[-1]] if s.split("-")[-1] in RAL else RAL["3005"], "c8")),
+    (r"^ПН-С20-", lambda s, n: g.corrugated(RAL[s.split("-")[-1]], "c20")),
+    (r"^МЧ-М-(045|8017)", lambda s, n: g.corrugated(RAL["8017"], "tile")),
+    (r"^МЧ-М-", lambda s, n: g.corrugated(RAL[s.split("-")[-1]], "tile")),
+    (r"^ОН-2000-З", lambda s, n: g.corrugated("#2f4a2e", "ondulin")),
+    (r"^ОН-2000-К", lambda s, n: g.corrugated("#7a2a24", "ondulin")),
+    (r"^ОН-2000", lambda s, n: g.corrugated("#5a3e2b", "ondulin")),
+    (r"^ОН-КН", lambda s, n: g.ridge("#5a3e2b")),
+    (r"^ОН-ГВ", lambda s, n: g.hanger_pack(n)),
+    (r"^КР-СК-6005", lambda s, n: g.roof_screws(RAL["6005"])),
+    (r"^КР-СК-", lambda s, n: g.roof_screws(RAL["3005"])),
+    (r"^ВД-Ж", lambda s, n: g.gutter("#4a3426", "gutter")),
+    (r"^ВД-Т", lambda s, n: g.gutter("#4a3426", "pipe")),
+    # Профиль для ГКЛ
+    (r"^ПР-ПП", lambda s, n: g.metal_profile("pp")),
+    (r"^ПР-ПН-50", lambda s, n: g.metal_profile("pn50")),
+    (r"^ПР-ПН", lambda s, n: g.metal_profile("pn")),
+    (r"^ПР-ПС", lambda s, n: g.metal_profile("ps")),
+    (r"^(ПР-ПДВ|ПР-КРБ|ПЛТ-УГ)", lambda s, n: g.hanger_pack(n)),
+    (r"^КР-ГКЛ", ("photo", "wood-screws:a3")),
+    # Сантехника
+    (r"^ТР-PP-", lambda s, n: g.pipe("#f1f3f5", mm(n, 1) / 1000 * 1.4, 1.3, socket=False, count=5)),
+    (r"^ТР-К-", lambda s, n: g.pipe("#9aa0a6", mm(n, 0) / 1000 * 0.45 + 0.012, 1.3 if "-1" not in s[6:] else 0.8)),
+    (r"^ТР-МП", lambda s, n: g.pipe_coil()),
+    (r"^ФТ-У-", lambda s, n: g.elbow("#f1f3f5", 0.04, 90, sockets=False)),
+    (r"^ФТ-МФ", lambda s, n: g.coupling("#f1f3f5")),
+    (r"^ФТ-ТР", lambda s, n: g.tee("#9aa0a6")),
+    (r"^ФТ-ОТ-.*-45", lambda s, n: g.elbow("#9aa0a6", 0.055, 45)),
+    (r"^ФТ-ОТ-", lambda s, n: g.elbow("#9aa0a6", 0.055, 87)),
+    (r"^КШ-", lambda s, n: g.ball_valve(0.5 if "12" in s else 0.8)),
+    (r"^ПВ-ГБ", ("photo", "flex-hose:b1")),
+    (r"^СМ-К-05", ("photo", "faucet-kitchen:b2")),
+    (r"^СМ-К-", ("photo", "faucet-kitchen:b5")),
+    (r"^СМ-(В|ТС)-", ("photo", "faucet-bath:c1")),
+    (r"^СМ-Р-", ("photo", "faucet-sink:a1")),
+    (r"^(СМ-Д|ДШ-ЛК)", ("photo", "shower:a1")),
+    (r"^ДШ-ШЛ", ("photo", "shower-hose:b5")),
+    (r"^ВН-ПР", lambda s, n: g.water_heater(flow=True)),
+    (r"^ВН-", lambda s, n: g.water_heater(mm(n, 0))),
+    (r"^СФ-УН", lambda s, n: g.toilet()),
+    (r"^СФ-РК", lambda s, n: g.sink()),
+    (r"^СФ-ПД", lambda s, n: g.sink(pedestal=True)),
+    (r"^СФ-ВН", lambda s, n: g.bathtub()),
+    (r"^СФ-СФ", lambda s, n: g.siphon()),
+    (r"^СФ-ИНС", lambda s, n: g.installation()),
+    (r"^РД-(БМ|АЛ)", lambda s, n: g.radiator(int(re.search(r"(\d+) секц", n).group(1)))),
+    (r"^РД-КМ", lambda s, n: g.mayevsky()),
+    (r"^РД-НС", ("photo", "pump:b1")),
+    (r"^РД-БК", lambda s, n: g.expansion_tank()),
+    # Полы
+    (r"^ЛМ-33-ДН", lambda s, n: g.laminate_pack("oak", 8, n)),
+    (r"^ЛМ-(32|ВЛ)-ДС", lambda s, n: g.laminate_pack("oak-grey", 8, n)),
+    (r"^ЛМ-34-ОР", lambda s, n: g.laminate_pack("walnut", 12, n)),
+    (r"^ЛМ-32-ДБ", lambda s, n: g.laminate_pack("oak-white", 8, n)),
+    (r"^ЛМ-32-ДМ", lambda s, n: g.laminate_pack("oak-honey", 8, n)),
+    (r"^ЛМ-32-ЯС", lambda s, n: g.laminate_pack("ash", 8, n)),
+    (r"^ЛМ-33-ДД", lambda s, n: g.laminate_pack("smoked", 8, n)),
+    (r"^ЛМ-33-ОТ", lambda s, n: g.laminate_pack("walnut-dark", 10, n)),
+    (r"^ЛМ-33-СС", lambda s, n: g.laminate_pack("pine", 10, n)),
+    (r"^ЛМ-34-ДС", lambda s, n: g.laminate_pack("scandi", 12, n)),
+    (r"^ЛМ-34-ВН", lambda s, n: g.laminate_pack("wenge", 12, n)),
+    (r"^ЛМ-ВЛ-БТ", lambda s, n: g.laminate_pack("concrete", 8, n)),
+    (r"^ПД-ХВ", lambda s, n: g.underlay("board")),
+    (r"^ПД-ПРБ", lambda s, n: g.underlay("cork", n)),
+    (r"^ПД-", lambda s, n: g.underlay("xps", n)),
+    (r"^ПЛТ-58-ДН", lambda s, n: g.baseboard("oak")),
+    (r"^ПЛТ-58-ДС", lambda s, n: g.baseboard("oak-grey")),
+    (r"^ПЛТ-58-ВН", lambda s, n: g.baseboard("wenge")),
+    (r"^ПРГ-30", lambda s, n: g.threshold()),
+    (r"^ПРГ-РУ", lambda s, n: g.threshold(wood="oak")),
+    (r"^ЛН-Б-ДС", lambda s, n: g.linoleum(g.wood_tex("oak-honey"))),
+    (r"^ЛН-Б-ПС", lambda s, n: g.linoleum(g.tile_tex())),
+    (r"^ЛН-ПК", lambda s, n: g.linoleum(g.wood_tex("oak"))),
+    (r"^ЛН-К", lambda s, n: g.linoleum(g.photo_tex("concrete") or g.proc_tex("paper-grey"))),
+    # Поликарбонат
+    (r"^ПК-С-", lambda s, n: g.sheet_stack("polycarbonate", 2.1, 3.0, mm(n, 0) / 1000 * 2, 5, pc_color(s))),
+    (r"^ПК-М-", lambda s, n: g.mono_polycarbonate(PC["Б"] if s.endswith("Б") else "#e6f3fa")),
+    (r"^ПК-НП", lambda s, n: g.pc_profile("hp")),
+    (r"^ПК-UP", lambda s, n: g.pc_profile("up")),
+    (r"^ПК-ТШ", lambda s, n: g.thermo_washers()),
+    (r"^ТП-", lambda s, n: g.greenhouse(int(s.split("-")[-1]) // 2 + 2)),
+    # Печное литьё и дымоходы
+    (r"^ПЛ-ДТ\d?С?$", lambda s, n: g.stove_door(glass="стекл" in n)),
+    (r"^ПЛ-ДПР", lambda s, n: g.stove_door(small=True)),
+    (r"^ПЛ-ДП", lambda s, n: g.stove_door(small=True, vent=True)),
+    (r"^ПЛ-(РД|РУ)", lambda s, n: g.grate((mm(n, 1) / 1000, mm(n, 2) / 1000))),
+    (r"^ПЛ-П2", lambda s, n: g.stove_plate(2)),
+    (r"^ПЛ-П1", lambda s, n: g.stove_plate(1)),
+    (r"^ПЛ-ЗВ", lambda s, n: g.damper()),
+    (r"^ПЛ-ВК", lambda s, n: g.damper(round_lid=True)),
+    (r"^ПЛ-ДШ", lambda s, n: g.oven_box()),
+    (r"^ПЛ-ШН", lambda s, n: g.rope_coil()),
+    (r"^ДМ-СЭ", lambda s, n: g.sandwich("pipe")),
+    (r"^ДМ-КЛ", lambda s, n: g.sandwich("elbow")),
+    (r"^ДМ-ТР", lambda s, n: g.sandwich("tee")),
+    (r"^ДМ-ЗН", lambda s, n: g.sandwich("cap")),
+    (r"^ДМ-ХМ", lambda s, n: g.sandwich("clamp")),
+    # Крепёж
+    (r"^КР-СД", ("photo", "wood-screws:a4")),
+    (r"^КР-СМ", ("photo", "metal-screws:a4")),
+    (r"^КР-ДГ", ("photo", "wall-plugs:b9")),
+    (r"^КР-ДР", ("photo", "wall-plugs:a4")),
+    (r"^КР-АБ", lambda s, n: g.anchor_bolt()),
+    (r"^КР-ГВ", ("photo", "nails:c2")),
+    (r"^КР-УГ", lambda s, n: g.angle_bracket()),
+    (r"^КР-ЛП", lambda s, n: g.perforated_strip()),
+    (r"^КР-ХТ", ("photo", "pipe-clamp:a1")),
+    (r"^КР-ШП", lambda s, n: g.threaded_rod()),
+    # Инструмент
+    (r"^ИН-ШП-100", ("photo", "putty-knife:a1")),
+    (r"^ИН-ШП-", lambda s, n: g.facade_spatula(mm(n, 0) / 1000)),
+    (r"^ИН-УР", ("photo", "level:a1")),
+    (r"^ИН-ТЧ", ("photo", "wheelbarrow:a10")),
+    (r"^ИН-КЛ", lambda s, n: g.trowel()),
+    (r"^ИН-ПР-", lambda s, n: g.straightedge()),
+    (r"^ИН-ВЛ", ("photo", "paint-roller:c5")),
+    (r"^ИН-КС", ("photo", "paint-brush:a4")),
+    (r"^ИН-ВД", lambda s, n: g.bucket_plain()),
+    (r"^ИН-РЛ", ("photo", "tape-measure:a7")),
+    (r"^ИН-НЖ", ("photo", "utility-knife:a3")),
+    (r"^ИН-ЛП", lambda s, n: g.shovel()),
+    (r"^ИН-ПРЧ", ("photo", "gloves:c5")),
+    (r"^ИН-МКС", lambda s, n: g.mixer_paddle()),
+    (r"^ЭИ-ДШ", ("photo", "drill:a1")),
+    (r"^ЭИ-ПФ", ("photo", "hammer-drill:b2", (0.0, 0.0, 0.74, 1.0), [(0.765, 0.64, 1.0, 1.0), (0.72, 0.8, 1.0, 1.0)])),  # без перчаток
+    (r"^ЭИ-УШМ", ("photo", "grinder:a2")),
+    (r"^ЭИ-ЛБ", ("photo", "jigsaw:a1")),
+    (r"^ЭИ-МКС", lambda s, n: g.mixer_tool()),
+    (r"^ЭИ-КР", lambda s, n: g.cutting_discs()),
 ]
-
-# Понятие -> номер кандидата из search (1..8) или «понятие:номер» (снимок другого понятия), по листам выбора.
-# Нет в словаре или 0 — подходящего фото нет, товар получает рисунок.
-CHOICES = {
-    "anchor": 2, "baseboard": 6, "bathtub": 5, "batten": 6, "beam": 1, "board": 4, "brick-brown": 5, "brick-red": 5,
-    "brick-white": 1, "brick-yellow": 5, "chimney": 2, "clay-block": 6, "cork": 6, "cutting-disc": 1, "downpipe": 4,
-    "drill": 4, "faucet-bath": 6, "faucet-kitchen": 4, "faucet-kitchen-black": 1, "faucet-sink": 6,
-    "flex-hose": 1, "foam-block": 3, "gloves": 1, "greenhouse": 7, "grinder": 1, "gutter": 6, "hammer-drill": 6,
-    "jigsaw": 1, "laminate-ash": "laminate-pine:2", "laminate-concrete": 6, "laminate-dark": "laminate-scandi:5",
-    "laminate-grey": 3, "laminate-honey": 1, "laminate-oak": 1, "laminate-pine": 4, "laminate-scandi": 3,
-    "laminate-smoked": "laminate-oak:5", "laminate-walnut": 4, "laminate-wenge": "laminate-smoked:3",
-    "laminate-white": "laminate-smoked:4", "level": 2, "linoleum-grey": "laminate-concrete:6", "linoleum-tile": 7,
-    "linoleum-wood": 2, "metal-profile": 3, "metal-screws": "wood-screws:3", "metal-tile-brown": "profnastil-brown:1",
-    "metal-tile-green": 1, "metal-tile-red": 1, "mineral-wool": 1, "ondulin-brown": 2, "ondulin-green": 6,
-    "ondulin-red": 1, "osb": 1, "paint-brush": "paint-white:2", "paint-roller": 5, "paint-white": 4,
-    "paneling": 5, "perforated-tape": 2, "pipe-clamp": 1, "pipe-coil": 1, "plywood": 1, "polycarbonate": 3,
-    "polycarbonate-color": "polycarbonate:1", "pp-fitting": 6, "pp-pipe": "pp-fitting:8", "profnastil-brown": 5,
-    "profnastil-green": 2, "profnastil-red": "ondulin-red:1", "profnastil-zinc": 5, "pump": 2, "radiator": 4,
-    "roof-screws": "wood-screws:3", "sewer-fitting": 1, "sewer-pipe": 2, "shovel": 8, "shower": 5,
-    "shower-hose": 5, "sink": 8, "siphon": 1, "stove-door": 1, "stove-top": 6, "straightedge": 7,
-    "tape-measure": 5, "threaded-rod": 5, "toilet": 8, "trowel": "putty-knife:1", "utility-knife": 8,
-    "wall-plugs": 6, "wheelbarrow": 4, "wood-screws": 4,
-    # второй круг поиска (retry)
-    "ball-valve": "ball-valve~2:2", "eps": "eps~2:1", "nails": "nails~2:4",
-    "putty-knife": "putty-knife~2:2", "sealant": "sealant~2:3",
-}
 
 
 def products():
-    """Артикул -> (название, раздел, группа) из демо-каталога сайта."""
+    """Артикул -> название из демо-каталога сайта."""
     sys.path.insert(0, str(TOOLS.parents[1] / "site"))
     from catalog.demo_data import CATALOG
     from catalog.demo_data_extra import EXTRA
 
     result = {}
     for source in (CATALOG, EXTRA):
-        for section, groups in source.items():
-            for group, rows in groups.items():
+        for groups in source.values():
+            for rows in groups.values():
                 for row in rows:
-                    result.setdefault(row[1], (row[0], section, group))
+                    result.setdefault(row[1], row[0])
     return result
 
 
-def concept(sku):
-    for pattern, name in RULES:
+def rule(sku):
+    for pattern, action in RULES:
         if re.search(pattern, sku):
-            return name
+            return action
     return None
 
 
 # ---------------------------------------------------------------------------------------------------------
-# Pixabay: кандидаты и листы для выбора
+# Фото: вырезание фона и постановка в кадр
 
-def api_key():
-    return (TOOLS / ".pixabay-key").read_text(encoding="utf-8-sig").strip()
+_session = None
 
 
-def fetch(url, timeout=30):
+def cutout_mask(img):
+    """Маска товара 0..255 по ISNet (вход 1024×1024, нормировка как в rembg)."""
+    global _session
+    if _session is None:
+        import onnxruntime as ort
+        _session = ort.InferenceSession(str(CACHE / "models" / "isnet-general-use.onnx"),
+                                        providers=["CPUExecutionProvider"])
+    inp = _session.get_inputs()[0]
+    x = np.asarray(img.convert("RGB").resize((1024, 1024), Image.BILINEAR), dtype=np.float32) / 255.0
+    x = ((x - 0.5) / 1.0).transpose(2, 0, 1)[None]
+    y = _session.run(None, {inp.name: x})[0][0, 0]
+    y = (y - y.min()) / (y.max() - y.min() + 1e-6)
+    y = np.clip((y - 0.12) / 0.76, 0, 1)            # убираем полупрозрачный «туман» вокруг товара
+    return Image.fromarray((y * 255).astype(np.uint8)).resize(img.size, Image.BILINEAR)
+
+
+def stage(rgba, fill=0.8):
+    """Товар с альфа-каналом -> кадр 1000×1000: по центру, с полями, мягкая тень на полу."""
+    bbox = rgba.getchannel("A").point(lambda a: 255 if a > 40 else 0).getbbox()
+    item = rgba.crop(bbox)
+    scale = SIZE * fill / max(item.size)
+    item = item.resize((max(1, int(item.width * scale)), max(1, int(item.height * scale))), Image.LANCZOS)
+    canvas = Image.new("RGB", (SIZE, SIZE), "white")
+    x = (SIZE - item.width) // 2
+    y = (SIZE - item.height) // 2 - int(SIZE * 0.02)
+    # Тень: силуэт нижней трети, сплющенный и размытый
+    alpha = np.asarray(item.getchannel("A"), dtype=np.float32) / 255
+    shadow = Image.new("L", (SIZE, SIZE), 0)
+    foot = Image.fromarray((alpha * 255).astype(np.uint8)).resize((item.width, max(1, item.height // 9)))
+    shadow.paste(foot, (x, y + item.height - foot.height // 2))
+    shadow = shadow.filter(ImageFilter.GaussianBlur(SIZE * 0.022))
+    sh = np.asarray(shadow, dtype=np.float32) / 255 * 0.28
+    base = np.asarray(canvas, dtype=np.float32) * (1 - sh[..., None])
+    canvas = Image.fromarray(base.astype(np.uint8))
+    canvas.paste(item.convert("RGB"), (x, y), item.getchannel("A"))
+    return canvas
+
+
+def fetch(url):
     request = urllib.request.Request(url, headers={"User-Agent": "Hoztrade-catalog/1.0"})
-    with urllib.request.urlopen(request, timeout=timeout) as response:
+    with urllib.request.urlopen(request, timeout=90) as response:
         return response.read()
 
 
-def search(retry=False):
-    """Кандидаты по запросам PHOTO. retry — новый круг для понятий без выбранного фото: кандидаты пишутся
-    под именем «понятие~2», выбор первого круга не теряется."""
-    key = api_key()
-    CACHE.mkdir(parents=True, exist_ok=True)
-    meta_path = CACHE / "meta.json"
-    meta = json.loads(meta_path.read_text(encoding="utf-8")) if retry and meta_path.exists() else {}
-    used = sorted({concept(s) for s in products()} & set(PHOTO))
-    if retry:
-        used = [name for name in used if not CHOICES.get(name)]
-    keys = []
-    for name in used:
-        query = urllib.parse.urlencode({"key": key, "q": PHOTO[name], "image_type": "photo", "per_page": CANDIDATES,
-                                        "safesearch": "true", "order": "popular"})
-        hits = json.loads(fetch("https://pixabay.com/api/?" + query))["hits"][:CANDIDATES]
-        time.sleep(0.8)  # лимит API — 100 запросов в минуту
-        key_name = f"{name}~2" if retry else name
-        meta[key_name] = [{"id": h["id"], "page": h["pageURL"], "user": h["user"], "tags": h["tags"],
-                           "large": h["largeImageURL"]} for h in hits]
-        folder = CACHE / key_name
-        folder.mkdir(exist_ok=True)
-        for i, hit in enumerate(hits, 1):
-            (folder / f"{i}.jpg").write_bytes(fetch(hit["webformatURL"]))
-        keys.append(key_name)
-        print(f"{key_name}: {len(hits)}")
-    meta_path.write_text(json.dumps(meta, ensure_ascii=False, indent=1), encoding="utf-8")
-    sheets(keys, prefix="retry" if retry else "sheet")
-
-
-def candidate(meta, name, choice):
-    """Снимок по выбору: номер кандидата понятия или «понятие:номер»."""
-    if isinstance(choice, str):
-        name, _, number = choice.rpartition(":")
-        choice = int(number)
-    return meta[name][choice - 1]
-
-
-def sheets(names, per_sheet=7, thumb=150, prefix="sheet"):
-    label_w = 170
-    for start in range(0, len(names), per_sheet):
-        chunk = names[start:start + per_sheet]
-        sheet = Image.new("RGB", (label_w + CANDIDATES * (thumb + 6), len(chunk) * (thumb + 6)), "white")
-        d = ImageDraw.Draw(sheet)
-        for row, name in enumerate(chunk):
-            y = row * (thumb + 6)
-            d.text((4, y + 4), name, font=font("arialbd.ttf", 16), fill="black")
-            for line, part in enumerate(textwrap.wrap(PHOTO[name.split("~")[0]], 18)):
-                d.text((4, y + 28 + line * 18), part, font=font("arial.ttf", 14), fill=(90, 90, 90))
-            for i in range(1, CANDIDATES + 1):
-                path = CACHE / name / f"{i}.jpg"
-                x = label_w + (i - 1) * (thumb + 6)
-                if path.exists():
-                    with Image.open(path) as img:
-                        sheet.paste(ImageOps.fit(img.convert("RGB"), (thumb, thumb)), (x, y))
-                d.rectangle((x, y, x + 22, y + 20), fill="black")
-                d.text((x + 6, y + 1), str(i), font=font("arialbd.ttf", 15), fill="white")
-        out = CACHE / f"{prefix}-{start // per_sheet + 1:02d}.jpg"
-        sheet.save(out, quality=85)
-        print(out)
+def photo(ref, crop=None, erase=()):
+    """«понятие:код» -> (картинка, сведения об источнике). crop — часть снимка в долях (x0, y0, x1, y1),
+    erase — прямоугольники в долях кадра, которые не относятся к товару."""
+    concept, code = ref.split(":")
+    meta = json.loads((CACHE / "stock" / "meta.json").read_text(encoding="utf-8"))
+    hit = meta[concept][code[0]][int(code[1:]) - 1]
+    path = CACHE / "stock" / "large" / f"{concept}-{code}.jpg"
+    if not path.exists():
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_bytes(fetch(hit["large"]))
+    with Image.open(path) as src:
+        src = ImageOps.exif_transpose(src).convert("RGB")
+        if crop:
+            w, h = src.size
+            src = src.crop((int(crop[0] * w), int(crop[1] * h), int(crop[2] * w), int(crop[3] * h)))
+        src.thumbnail((1600, 1600), Image.LANCZOS)
+        rgba = src.copy()
+        mask = cutout_mask(src)
+        for x0, y0, x1, y1 in erase:
+            ImageDraw.Draw(mask).rectangle((x0 * src.width, y0 * src.height, x1 * src.width, y1 * src.height), fill=0)
+        rgba.putalpha(mask)
+    credit = {k: hit[k] for k in ("source", "page", "author", "license")}
+    return stage(rgba), credit
 
 
 # ---------------------------------------------------------------------------------------------------------
-# Рисунки упаковки: мешок, ведро, канистра, банка, баллон, рулон, коробка — с названием товара на этикетке
 
-BG = (246, 247, 245)
-INK = (34, 40, 46)
-# Цвет этикетки по разделу каталога
-BANDS = {
-    "Стройматериалы": (30, 79, 138),
-    "Сухие смеси": (21, 128, 61),
-    "Сантехника": (14, 116, 144),
-    "Ламинат и напольные покрытия": (146, 64, 14),
-    "Поликарбонат": (2, 132, 199),
-    "Печное литьё": (153, 27, 27),
-    "Краски и химия": (180, 83, 9),
-    "Крепёж и инструмент": (71, 85, 105),
-}
-UNIT = r"\d+(?:[,.]\d+)?\s*(?:кг|мл|л|м²|м|шт)\b"
-
-
-def font(name, size):
-    return ImageFont.truetype(str(FONTS / name), size)
-
-
-def fit(draw, text, width, size, bold=True):
-    name = "arialbd.ttf" if bold else "arial.ttf"
-    while size > 14 and draw.textlength(text, font=font(name, size)) > width:
-        size -= 2
-    return font(name, size)
-
-
-def label_text(name):
-    """«Штукатурка гипсовая Кнауф Ротбанд 30 кг» -> ("ШТУКАТУРКА", ["гипсовая Кнауф", "Ротбанд"], "30 кг")."""
-    matches = list(re.finditer(UNIT, name))
-    amount = matches[-1].group(0) if matches else ""
-    rest = name[:matches[-1].start()] + name[matches[-1].end():] if matches else name
-    rest = re.sub(r"\s*,\s*(,|$)", r"\1", rest).strip(" ,")
-    title, _, tail = rest.partition(" ")
-    return title.upper(), textwrap.wrap(tail.strip(" ,"), 20)[:3], amount
-
-
-def shadow(img, box, strength=110):
-    mask = Image.new("L", img.size, 0)
-    ImageDraw.Draw(mask).ellipse(box, fill=strength)
-    img.paste((150, 155, 150), (0, 0), mask.filter(ImageFilter.GaussianBlur(18)))
-
-
-def darker(color, by=22):
-    return tuple(max(0, c - by) for c in color)
-
-
-def label(d, box, name, band):
-    """Этикетка с названием; возвращает фасовку («30 кг») для плашки."""
-    x0, y0, x1, y1 = box
-    d.rectangle(box, fill=band)
-    title, lines, amount = label_text(name)
-    width = x1 - x0 - 30
-    f = fit(d, title, width, 50)
-    y = y0 + 14
-    d.text(((x0 + x1 - d.textlength(title, font=f)) / 2, y), title, font=f, fill="white")
-    y += f.size + 12
-    for line in lines:
-        f2 = fit(d, line, width, 30, bold=False)
-        d.text(((x0 + x1 - d.textlength(line, font=f2)) / 2, y), line, font=f2, fill="white")
-        y += f2.size + 6
-    return amount
-
-
-def badge(d, cx, y, amount):
-    if amount:
-        f = font("arialbd.ttf", 40)
-        w = d.textlength(amount, font=f)
-        d.rounded_rectangle((cx - w / 2 - 20, y, cx + w / 2 + 20, y + 66), radius=16, fill="white")
-        d.text((cx - w / 2, y + 10), amount, font=f, fill=INK)
-
-
-def draw_bag(name, band):
-    img = Image.new("RGB", (SIZE, SIZE), BG)
-    shadow(img, (170, 690, 630, 745))
-    d = ImageDraw.Draw(img)
-    color = (214, 208, 200)
-    d.rounded_rectangle((190, 110, 610, 715), radius=46, fill=color)
-    d.rounded_rectangle((190, 110, 222, 715), radius=20, fill=darker(color))
-    d.rounded_rectangle((578, 110, 610, 715), radius=20, fill=darker(color))
-    d.rectangle((210, 110, 590, 140), fill=darker(color, 12))
-    for x in range(222, 580, 18):
-        d.line((x, 126, x + 9, 126), fill=darker(color), width=3)
-    badge(d, 400, 520, label(d, (222, 210, 578, 470), name, band))
-    f = font("arialbd.ttf", 28)
-    d.text((400 - d.textlength("ХОЗТРЕЙД", font=f) / 2, 640), "ХОЗТРЕЙД", font=f, fill=darker(color, 60))
-    return img
-
-
-def draw_bucket(name, band):
-    img = Image.new("RGB", (SIZE, SIZE), BG)
-    shadow(img, (180, 680, 620, 740))
-    d = ImageDraw.Draw(img)
-    d.polygon([(190, 190), (610, 190), (575, 710), (225, 710)], fill=(250, 250, 250), outline=(215, 215, 215))
-    d.rounded_rectangle((175, 150, 625, 200), radius=14, fill=(235, 236, 236), outline=(205, 205, 205))
-    d.arc((210, 60, 590, 330), 200, 340, fill=(120, 125, 130), width=8)
-    badge(d, 400, 560, label(d, (205, 260, 595, 500), name, band))
-    return img
-
-
-def draw_canister(name, band):
-    img = Image.new("RGB", (SIZE, SIZE), BG)
-    shadow(img, (190, 690, 610, 745))
-    d = ImageDraw.Draw(img)
-    body = (236, 238, 240)
-    d.rounded_rectangle((210, 170, 590, 715), radius=40, fill=body, outline=(205, 208, 210))
-    d.rounded_rectangle((420, 90, 570, 190), radius=30, fill=body, outline=(205, 208, 210))
-    d.rounded_rectangle((450, 115, 540, 165), radius=18, fill=BG)
-    d.rounded_rectangle((250, 120, 330, 180), radius=10, fill=band)
-    badge(d, 400, 580, label(d, (230, 270, 570, 520), name, band))
-    return img
-
-
-def draw_can(name, band):
-    img = Image.new("RGB", (SIZE, SIZE), BG)
-    shadow(img, (190, 680, 610, 740))
-    d = ImageDraw.Draw(img)
-    metal = (200, 204, 208)
-    d.rectangle((210, 200, 590, 680), fill=metal)
-    d.ellipse((210, 640, 590, 720), fill=metal)
-    d.ellipse((210, 160, 590, 240), fill=(220, 223, 226), outline=(170, 174, 178), width=4)
-    d.ellipse((240, 172, 560, 228), outline=(170, 174, 178), width=3)
-    badge(d, 400, 570, label(d, (210, 280, 590, 540), name, band))
-    return img
-
-
-def draw_spray(name, band):
-    img = Image.new("RGB", (SIZE, SIZE), BG)
-    shadow(img, (250, 700, 550, 750))
-    d = ImageDraw.Draw(img)
-    d.rounded_rectangle((270, 190, 530, 720), radius=36, fill=(225, 228, 231))
-    d.rounded_rectangle((320, 120, 480, 200), radius=20, fill=(60, 66, 72))
-    d.rectangle((380, 80, 420, 125), fill=(60, 66, 72))
-    d.rectangle((420, 88, 520, 104), fill=(60, 66, 72))
-    badge(d, 400, 600, label(d, (270, 270, 530, 560), name, band))
-    return img
-
-
-def draw_roll(name, band):
-    img = Image.new("RGB", (SIZE, SIZE), BG)
-    shadow(img, (140, 640, 660, 710))
-    d = ImageDraw.Draw(img)
-    face = (232, 234, 236)
-    d.rectangle((210, 170, 590, 660), fill=face)
-    d.ellipse((210, 610, 590, 710), fill=face)
-    d.ellipse((210, 120, 590, 220), fill=(244, 245, 246), outline=(200, 203, 206), width=3)
-    for r in range(30, 180, 26):
-        d.ellipse((400 - r, 170 - r * 0.26, 400 + r, 170 + r * 0.26), outline=(210, 212, 215), width=2)
-    d.ellipse((370, 160, 430, 180), fill=(120, 110, 95))
-    badge(d, 400, 560, label(d, (210, 270, 590, 520), name, band))
-    return img
-
-
-def draw_part(name, band):
-    """Коробка с этикеткой — мелкие детали и товары, которых нет на фотобанке."""
-    img = Image.new("RGB", (SIZE, SIZE), BG)
-    shadow(img, (150, 650, 650, 720))
-    d = ImageDraw.Draw(img)
-    kraft = (205, 170, 125)
-    d.polygon([(160, 250), (520, 250), (640, 170), (280, 170)], fill=(222, 190, 146))
-    d.polygon([(520, 250), (640, 170), (640, 600), (520, 690)], fill=darker(kraft, 30))
-    d.rectangle((160, 250, 520, 690), fill=kraft)
-    d.rectangle((310, 250, 370, 330), fill=(232, 205, 165))
-    badge(d, 340, 605, label(d, (180, 340, 500, 590), name, band))
-    return img
-
-
-DRAW = {"bag": draw_bag, "bucket": draw_bucket, "canister": draw_canister, "can": draw_can, "spray": draw_spray,
-        "roll": draw_roll, "part": draw_part}
-
-
-def save(img, path):
-    img.convert("RGB").save(path, "JPEG", quality=85, optimize=True, progressive=True)
-
-
-def build():
-    OUT.mkdir(parents=True, exist_ok=True)
-    meta_path = CACHE / "meta.json"
-    meta = json.loads(meta_path.read_text(encoding="utf-8")) if meta_path.exists() else {}
-    credits, large = {}, {}
-    for sku, (name, section, _group) in sorted(products().items()):
-        kind = concept(sku)
-        choice = CHOICES.get(kind, 0)
-        if not kind.startswith("draw:") and choice:
-            hit = candidate(meta, kind, choice)
-            if hit["id"] not in large:
-                with Image.open(io.BytesIO(fetch(hit["large"]))) as src:
-                    large[hit["id"]] = ImageOps.fit(ImageOps.exif_transpose(src).convert("RGB"), (SIZE, SIZE),
-                                                    Image.LANCZOS)
-            save(large[hit["id"]], OUT / f"{sku}.jpg")
-            credits[sku] = {"source": "Pixabay", "id": hit["id"], "page": hit["page"], "author": hit["user"]}
+def build(prefixes=()):
+    OUT.mkdir(exist_ok=True)
+    credits_path = OUT / "credits.json"
+    credits = json.loads(credits_path.read_text(encoding="utf-8")) if credits_path.exists() and prefixes else {}
+    textures = json.loads((CACHE / "textures" / "credits.json").read_text(encoding="utf-8")) \
+        if (CACHE / "textures" / "credits.json").exists() else {}
+    missing = []
+    for sku, name in products().items():
+        if prefixes and not sku.startswith(tuple(prefixes)):
+            continue
+        action = rule(sku)
+        if action is None:
+            missing.append(sku)
+            continue
+        if isinstance(action, tuple):
+            img, credit = photo(*action[1:])
+            credits[sku] = {"kind": "photo", **credit}
         else:
-            painter = DRAW[kind.split(":", 1)[1]] if kind.startswith("draw:") else draw_part
-            save(painter(name, BANDS.get(section, INK)), OUT / f"{sku}.jpg")
-            credits[sku] = {"source": "рисунок (1c/tools/product_images.py)"}
-    (OUT / "credits.json").write_text(json.dumps(credits, ensure_ascii=False, indent=1), encoding="utf-8")
-    photos = sum(1 for c in credits.values() if c["source"] == "Pixabay")
-    print(f"{OUT}: {len(credits)} картинок, из них фото {photos}, рисунков {len(credits) - photos}")
+            img = action(sku, name)
+            credits[sku] = {"kind": "drawing", "note": "рисунок (1c/tools/packshot*.py)"}
+        img.convert("RGB").save(OUT / f"{sku}.jpg", quality=90, optimize=True, progressive=True)
+        print(sku, credits[sku]["kind"], flush=True)
+    credits["_textures"] = textures
+    credits_path.write_text(json.dumps(credits, ensure_ascii=False, indent=1), encoding="utf-8")
+    if missing:
+        print("Нет правила:", ", ".join(missing))
 
 
-def check():
-    items = products()
-    missing = [sku for sku in items if concept(sku) is None]
-    used = {concept(s) for s in items}
-    print(f"товаров {len(items)}, без правила {len(missing)}: {missing}")
-    print(f"понятий без запроса: {used - set(PHOTO) - {c for c in used if c.startswith('draw:')}}; "
-          f"запросов без товаров: {set(PHOTO) - used}")
+def contact_sheet(out, per_row=10, cell=200):
+    files = sorted(p for p in OUT.glob("*.jpg"))
+    rows = math.ceil(len(files) / per_row)
+    sheet = Image.new("RGB", (per_row * cell, rows * (cell + 18)), "white")
+    d = ImageDraw.Draw(sheet)
+    f = ImageFont.truetype("C:/Windows/Fonts/arial.ttf", 12)
+    for i, p in enumerate(files):
+        x, y = (i % per_row) * cell, (i // per_row) * (cell + 18)
+        with Image.open(p) as img:
+            sheet.paste(img.resize((cell - 4, cell - 4)), (x + 2, y + 2))
+        d.text((x + 4, y + cell - 2), p.stem, font=f, fill="black")
+    sheet.save(out, quality=82)
 
 
 if __name__ == "__main__":
-    {"search": search, "retry": lambda: search(retry=True), "build": build, "check": check}[
-        sys.argv[1] if len(sys.argv) > 1 else "check"]()
-
-
+    args = sys.argv[1:]
+    sheet_out = None
+    if "--sheet" in args:
+        i = args.index("--sheet")
+        sheet_out = args[i + 1]
+        args = args[:i] + args[i + 2:]
+    build(args)
+    if sheet_out:
+        contact_sheet(sheet_out)

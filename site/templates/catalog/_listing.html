@@ -1,7 +1,7 @@
 {% load shop %}
 <div class="listing">
   <details class="filters" {% if filters.active %}open{% endif %} data-filters>
-    <summary>Фильтры{% if filters.active %} · включены{% endif %}</summary>
+    <summary><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 6h16M7 12h10M10 18h4"/></svg> Фильтры{% if filters.active %} · включены{% endif %}</summary>
     <form method="get" class="filters__form">
       {% if query %}<input type="hidden" name="q" value="{{ query }}">{% endif %}
       <input type="hidden" name="sort" value="{{ filters.sort }}">
@@ -12,7 +12,7 @@
           <input type="number" name="price_max" min="0" step="1" placeholder="до" value="{{ filters.price_max|default_if_none:'' }}" aria-label="Цена до">
         </div>
       </fieldset>
-      <label class="check"><input type="checkbox" name="in_stock" value="1" {% if filters.in_stock %}checked{% endif %}> Только в наличии</label>
+      <label class="switch"><input type="checkbox" name="in_stock" value="1" {% if filters.in_stock %}checked{% endif %}><span class="switch__ui" aria-hidden="true"></span> Только в наличии</label>
       {% if filters.brands|length > 1 or filters.brands.0.checked %}
       <fieldset>
         <legend>Бренд</legend>
@@ -28,7 +28,7 @@
 
   <div class="listing__main">
     <div class="toolbar">
-      <span class="muted">{{ page.paginator.count }} {{ page.paginator.count|plural:"товар,товара,товаров" }}</span>
+      <span class="toolbar__count">{{ page.paginator.count }} {{ page.paginator.count|plural:"товар,товара,товаров" }}</span>
       <nav class="sorts" aria-label="Сортировка">
         {% for key, label in filters.sorts %}
           <a href="{% url_with sort=key %}" {% if key == filters.sort %}class="is-active" aria-current="true"{% endif %}>{{ label }}</a>
@@ -42,9 +42,9 @@
       </div>
       {% if page.has_other_pages %}
         <nav class="pager" aria-label="Страницы">
-          {% if page.has_previous %}<a href="{% url_with page=page.previous_page_number %}">← Назад</a>{% endif %}
-          <span>Страница {{ page.number }} из {{ page.paginator.num_pages }}</span>
-          {% if page.has_next %}<a href="{% url_with page=page.next_page_number %}">Дальше →</a>{% endif %}
+          {% if page.has_previous %}<a class="btn btn--ghost" href="{% url_with page=page.previous_page_number %}">← Назад</a>{% endif %}
+          <span class="muted">Страница {{ page.number }} из {{ page.paginator.num_pages }}</span>
+          {% if page.has_next %}<a class="btn btn--ghost" href="{% url_with page=page.next_page_number %}">Дальше →</a>{% endif %}
         </nav>
       {% endif %}
     {% else %}

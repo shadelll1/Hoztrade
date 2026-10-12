@@ -4,8 +4,8 @@
 .lead { font-size: 18px; color: #3d4650; max-width: 70ch; }
 .page--narrow { max-width: 860px; }
 .hp-wrap, .hp { position: absolute !important; left: -9999px !important; width: 1px; height: 1px; overflow: hidden; }
-.topbar__call { background: none; border: 0; color: #e9f4ed; font: inherit; cursor: pointer; padding: 0; }
-.topbar__call:hover { color: #fff; text-decoration: underline; }
+.topbar__call { background: none; border: 0; color: var(--text-2); font: inherit; cursor: pointer; padding: 0; }
+.topbar__call:hover { color: var(--brand-dark); }
 .hact--cart { position: relative; }
 .badge { position: absolute; top: 0; right: 4px; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 9px; background: var(--accent); color: #2a1d00; font: 700 11px/18px var(--font); font-style: normal; text-align: center; }
 .badge[hidden] { display: none; }

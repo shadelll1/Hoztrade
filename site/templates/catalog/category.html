@@ -11,12 +11,15 @@
     <a href="{% url 'catalog:root' %}">Каталог</a>
     {% for c in breadcrumbs %}<a href="{{ c.get_absolute_url }}">{{ c.name }}</a>{% endfor %}
   </nav>
-  <h1 class="page__title">{{ category.name }}</h1>
+  <h1 class="page__title">{{ category.name }}{% if node %} <span class="page__count">{{ node.count }}</span>{% endif %}</h1>
 
   {% if node.children %}
-    <div class="chips">
+    <div class="subcats">
       {% for child in node.children %}
-        <a class="chip" href="{{ child.get_absolute_url }}">{{ child.name }} <span>{{ child.count }}</span></a>
+        <a class="subcat" href="{{ child.get_absolute_url }}">
+          <span class="subcat__img">{% if child.image %}<img src="{{ child.image }}" alt="" loading="lazy" width="96" height="96">{% else %}{% root_of category as root %}{% category_icon root.name 32 %}{% endif %}</span>
+          <span class="subcat__name">{{ child.name }}<small>{{ child.count }} {{ child.count|plural:"товар,товара,товаров" }}</small></span>
+        </a>
       {% endfor %}
     </div>
   {% endif %}

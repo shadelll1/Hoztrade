@@ -35,6 +35,26 @@ def rub(value):
     return f"{sign}{text}{NBSP}₽"
 
 
+# Единицы фасованного товара, для которых покупателю полезна цена за килограмм (мешок 50 кг, ведро 18 кг).
+PER_KG_UNITS = {"мешок", "ведро", "банка", "упак"}
+
+
+@register.filter
+def per_kg(product, price=None):
+    """«10,40 ₽/кг» для мешков и вёдер; пусто, если единица штучная или вес неизвестен.
+
+    price — цена, от которой считать (по умолчанию розничная): {{ p|per_kg:p.price_wholesale }}.
+    """
+    weight = getattr(product, "weight_kg", None)
+    if getattr(product, "unit", "") not in PER_KG_UNITS or not weight or weight < 1:
+        return ""
+    try:
+        value = Decimal(price if price is not None else product.price_retail) / Decimal(weight)
+    except (InvalidOperation, TypeError, ValueError, ZeroDivisionError):
+        return ""
+    return f"{rub(value)}/кг"
+
+
 @register.filter
 def qty(value):
     """Количество без лишних нулей: 140.000 -> 140, 2.500 -> 2,5."""

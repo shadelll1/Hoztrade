@@ -11,7 +11,8 @@
     {% for root in catalog_tree %}
       <section class="tree__col">
         <a class="tree__root" href="{{ root.get_absolute_url }}">
-          <span class="cat__icon">{% category_icon root.name 28 %}</span>{{ root.name }}
+          <span class="tree__img">{% if root.image %}<img src="{{ root.image }}" alt="" loading="lazy" width="72" height="72">{% else %}{% category_icon root.name 28 %}{% endif %}</span>
+          <span>{{ root.name }}<small>{{ root.count }} {{ root.count|plural:"товар,товара,товаров" }}</small></span>
         </a>
         <ul>
           {% for child in root.children %}

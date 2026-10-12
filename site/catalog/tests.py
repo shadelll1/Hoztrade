@@ -6,7 +6,7 @@ from django.core.management import call_command
 
 from catalog.demo_data import CATALOG
 from catalog.models import Category, Product
-from catalog.templatetags.shop import plural, qty, rub, unit_count
+from catalog.templatetags.shop import per_kg, plural, qty, rub, unit_count
 
 
 @pytest.fixture
@@ -28,6 +28,31 @@ def test_plural_and_units():
     assert unit_count(340, "мешок") == "340 мешков"
     assert unit_count(2, "лист") == "2 листа"
     assert unit_count(140, "шт") == "140 шт"
+
+
+def test_per_kg_only_for_packed_goods():
+    bag = Product(unit="мешок", weight_kg=Decimal("50"), price_retail=Decimal("520"))
+    assert per_kg(bag) == "10,40 ₽/кг"
+    assert per_kg(bag, Decimal("485")) == "9,70 ₽/кг"
+    assert per_kg(Product(unit="шт", weight_kg=Decimal("3.6"), price_retail=Decimal("21"))) == ""
+    assert per_kg(Product(unit="мешок", weight_kg=Decimal("0"), price_retail=Decimal("100"))) == ""
+
+
+@pytest.mark.django_db
+def test_tree_sections_get_product_photo(client, demo, tmp_path, settings):
+    """Раздел без своих товаров с фото берёт миниатюру из подраздела — для плиток главной и меню."""
+    from django.core.cache import cache
+    from PIL import Image
+
+    settings.MEDIA_ROOT = tmp_path
+    cache.clear()
+    img = tmp_path / "ЦМ-500-50.jpg"
+    Image.new("RGB", (40, 40), "red").save(img)
+    call_command("load_demo_images", str(tmp_path), stdout=io.StringIO())
+    roots = {n.name: n for n in client.get("/").context["catalog_tree"]}
+    group = next(c for c in roots["Стройматериалы"].children if c.name == "Цемент и пескобетон")
+    assert group.image.endswith(".webp") and roots["Стройматериалы"].image == group.image
+    assert roots["Сантехника"].image == ""
 
 
 @pytest.mark.django_db

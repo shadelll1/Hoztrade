@@ -2,9 +2,11 @@
 <html lang="ru">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#ffffff">
   <title>{% block title %}{{ site.name }} — строительные материалы в Чебоксарах{% endblock %}</title>
   <meta name="description" content="{% block description %}Стройматериалы, сухие смеси, сантехника, ламинат, поликарбонат и печное литьё в Чебоксарах. Доставка грузотакси от 1,5 до 20 тонн.{% endblock %}">
+  <link rel="preload" href="{% static 'fonts/onest-cyrillic.woff2' %}" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="{% static 'css/site.css' %}">
   <link rel="stylesheet" href="{% static 'css/orders.css' %}">
   <link rel="stylesheet" href="{% static 'css/content.css' %}">
@@ -25,7 +27,7 @@
   <div class="wrap topbar__in">
     <span class="topbar__city">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 21s-7-6.2-7-11a7 7 0 0 1 14 0c0 4.8-7 11-7 11z"/><circle cx="12" cy="10" r="2.5"/></svg>
-      Чебоксары · 3 точки продаж
+      Чебоксары · 3 магазина
     </span>
     <nav class="topbar__nav" aria-label="Для покупателей">
       <a href="{% url 'content:promos' %}">Акции</a>
@@ -42,8 +44,8 @@
 <header class="header">
   <div class="wrap header__in">
     <a class="logo" href="{% url 'catalog:home' %}" aria-label="{{ site.name }} — на главную">
-      <svg class="logo__mark" width="40" height="40" viewBox="0 0 40 40" aria-hidden="true">
-        <rect width="40" height="40" rx="10" fill="var(--brand)"/>
+      <svg class="logo__mark" width="42" height="42" viewBox="0 0 40 40" aria-hidden="true">
+        <rect width="40" height="40" rx="12" fill="var(--brand)"/>
         <path d="M9 21 20 12l11 9" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
         <path d="M13 19v10h14V19" fill="none" stroke="#fff" stroke-width="3" stroke-linejoin="round"/>
         <rect x="17.5" y="23" width="5" height="6" fill="var(--accent)"/>
@@ -57,47 +59,62 @@
     </button>
 
     <form class="search" action="{% url 'catalog:search' %}" role="search">
+      <svg class="search__icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
       <input type="search" name="q" value="{{ query|default:'' }}" placeholder="Цемент, ламинат, поликарбонат…" aria-label="Поиск по каталогу" autocomplete="off">
-      <button type="submit" aria-label="Найти">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
-      </button>
+      <button class="search__btn" type="submit">Найти</button>
     </form>
 
     <nav class="header__actions" aria-label="Быстрые действия">
       <a class="hact" href="{% url 'orders:order_list' %}">
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M9 4h6l1 2h3v15H5V6h3z"/><path d="M9 11h6M9 15h4"/></svg>
-        <span>Заказ по списку</span>
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M9 4h6l1 2h3v15H5V6h3z"/><path d="M9 11h6M9 15h4"/></svg>
+        <span>По списку</span>
       </a>
       <a class="hact" href="{% url 'accounts:home' %}">
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/></svg>
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/></svg>
         <span>{% if user.is_authenticated %}Кабинет{% else %}Войти{% endif %}</span>
       </a>
       <a class="hact hact--cart" href="{% url 'orders:cart' %}">
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M3 4h2l2.4 11h11L21 7H6.2"/><circle cx="9" cy="19.5" r="1.5"/><circle cx="17" cy="19.5" r="1.5"/></svg>
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M3 4h2l2.4 11h11L21 7H6.2"/><circle cx="9" cy="19.5" r="1.5"/><circle cx="17" cy="19.5" r="1.5"/></svg>
         <span>Корзина</span>
         <i class="badge" data-cart-count {% if not cart_count %}hidden{% endif %}>{{ cart_count }}</i>
       </a>
     </nav>
   </div>
 
-  <div class="megamenu" id="megamenu" hidden>
-    <div class="wrap megamenu__in">
-      {% for root in catalog_tree %}
-        <section class="mm-col">
-          <a class="mm-root" href="{{ root.get_absolute_url }}">{% category_icon root.name 22 %}<span>{{ root.name }}</span></a>
-          <ul>
-            {% for child in root.children %}<li><a href="{{ child.get_absolute_url }}">{{ child.name }}</a></li>{% endfor %}
-          </ul>
-        </section>
-      {% endfor %}
-    </div>
-  </div>
-
   <nav class="catnav" aria-label="Разделы каталога">
     <div class="wrap catnav__in">
+      <a class="catnav__promo" href="{% url 'content:promos' %}">Акции</a>
       {% for root in catalog_tree %}<a href="{{ root.get_absolute_url }}">{{ root.name }}</a>{% endfor %}
     </div>
   </nav>
+
+  <div class="megamenu" id="megamenu" hidden>
+    <div class="wrap mega">
+      <ul class="mega__roots">
+        {% for root in catalog_tree %}
+          <li><a class="mega__root{% if forloop.first %} is-active{% endif %}" href="{{ root.get_absolute_url }}" data-mega-root="{{ forloop.counter }}">{% category_icon root.name 22 %}<span>{{ root.name }}</span><small>{{ root.count }}</small></a></li>
+        {% endfor %}
+      </ul>
+      <div class="mega__panels">
+        {% for root in catalog_tree %}
+          <section class="mega__panel" data-mega-panel="{{ forloop.counter }}" {% if not forloop.first %}hidden{% endif %}>
+            <header class="mega__head">
+              <h2><a href="{{ root.get_absolute_url }}">{{ root.name }}</a></h2>
+              <a class="link" href="{{ root.get_absolute_url }}">Все товары раздела · {{ root.count }}</a>
+            </header>
+            <div class="mega__grid">
+              {% for child in root.children %}
+                <a class="mega__child" href="{{ child.get_absolute_url }}">
+                  <span class="mega__img">{% if child.image %}<img src="{{ child.image }}" alt="" loading="lazy" width="64" height="64">{% else %}{% category_icon root.name 28 %}{% endif %}</span>
+                  <span class="mega__name">{{ child.name }}<small>{{ child.count }} {{ child.count|plural:"товар,товара,товаров" }}</small></span>
+                </a>
+              {% endfor %}
+            </div>
+          </section>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
 </header>
 
 <main id="main">
@@ -127,15 +144,22 @@
 </dialog>
 
 <footer class="footer">
-  <div class="wrap footer__grid">
-    <section>
+  <div class="wrap footer__top">
+    <div class="footer__brand">
       <a class="logo logo--light" href="{% url 'catalog:home' %}">
+        <svg class="logo__mark" width="42" height="42" viewBox="0 0 40 40" aria-hidden="true">
+          <rect width="40" height="40" rx="12" fill="var(--brand)"/>
+          <path d="M9 21 20 12l11 9" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M13 19v10h14V19" fill="none" stroke="#fff" stroke-width="3" stroke-linejoin="round"/>
+          <rect x="17.5" y="23" width="5" height="6" fill="var(--accent)"/>
+        </svg>
         <span class="logo__text"><b>Хозтрейд</b><small>стройматериалы · Чебоксары</small></span>
       </a>
       <p class="footer__lead">Более 10&nbsp;000 товаров для стройки, ремонта, дома и сада. Подберём материалы под ваш бюджет и привезём своим грузотакси.</p>
       <a class="footer__phone" href="tel:{{ site.phone_href }}">{{ site.phone }}</a>
       <a href="mailto:{{ site.email }}">{{ site.email }}</a>
-    </section>
+      <button class="btn btn--light footer__call" type="button" data-dialog-open="callback">Заказать звонок</button>
+    </div>
     <section>
       <h3>Каталог</h3>
       <ul>{% for root in catalog_tree %}<li><a href="{{ root.get_absolute_url }}">{{ root.name }}</a></li>{% endfor %}</ul>
@@ -165,6 +189,30 @@
     <span><a href="{% url 'pages:privacy' %}">Персональные данные</a> · <a href="{% url 'pages:cookies' %}">Cookie</a></span>
   </div>
 </footer>
+
+<nav class="tabbar" aria-label="Навигация по сайту">
+  <a class="tabbar__item{% if request.resolver_match.url_name == 'home' %} is-active{% endif %}" href="{% url 'catalog:home' %}">
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M4 11 12 4l8 7v9h-5v-6H9v6H4z"/></svg>
+    <span>Главная</span>
+  </a>
+  <button class="tabbar__item" type="button" aria-controls="megamenu" data-megamenu-toggle>
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="4" y="4" width="7" height="7" rx="2"/><rect x="13" y="4" width="7" height="7" rx="2"/><rect x="4" y="13" width="7" height="7" rx="2"/><rect x="13" y="13" width="7" height="7" rx="2"/></svg>
+    <span>Каталог</span>
+  </button>
+  <a class="tabbar__item hact--cart{% if request.resolver_match.url_name == 'cart' %} is-active{% endif %}" href="{% url 'orders:cart' %}">
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M3 4h2l2.4 11h11L21 7H6.2"/><circle cx="9" cy="19.5" r="1.5"/><circle cx="17" cy="19.5" r="1.5"/></svg>
+    <span>Корзина</span>
+    <i class="badge" data-cart-count {% if not cart_count %}hidden{% endif %}>{{ cart_count }}</i>
+  </a>
+  <a class="tabbar__item" href="{% url 'accounts:home' %}">
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/></svg>
+    <span>{% if user.is_authenticated %}Кабинет{% else %}Войти{% endif %}</span>
+  </a>
+  <a class="tabbar__item" href="tel:{{ site.phone_href }}">
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a1 1 0 0 1-1 1A16 16 0 0 1 4 5a1 1 0 0 1 1-1z"/></svg>
+    <span>Позвонить</span>
+  </a>
+</nav>
 
 <div class="cookie" role="region" aria-label="Уведомление о cookie" data-cookie hidden>
   <p>Сайт использует только технические cookie — для корзины и входа в кабинет. <a href="{% url 'pages:cookies' %}">Подробнее</a></p>

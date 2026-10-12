@@ -11,22 +11,28 @@
     });
   }
 
-  // «В корзину» без перезагрузки: обновляем значок и кнопку
-  var badge = document.querySelector("[data-cart-count]");
+  // «В корзину» без перезагрузки: обновляем значки (шапка и нижняя панель) и кнопки формы.
+  // Кнопка может стоять вне формы (панель на телефоне, атрибут form) — берём все кнопки отправки формы.
+  var badges = document.querySelectorAll("[data-cart-count]");
   document.querySelectorAll("[data-add-to-cart]").forEach(function (form) {
     form.addEventListener("submit", function (e) {
       e.preventDefault();
-      var btn = form.querySelector("button[type=submit]");
-      btn.disabled = true;
+      var buttons = Array.prototype.slice.call(form.querySelectorAll("button[type=submit]"));
+      if (form.id) buttons = buttons.concat(Array.prototype.slice.call(document.querySelectorAll('button[form="' + form.id + '"]')));
+      buttons.forEach(function (btn) { btn.disabled = true; });
       post(form).then(function (r) { return r.json(); }).then(function (data) {
-        if (badge) {
+        badges.forEach(function (badge) {
           badge.textContent = data.count;
           badge.hidden = !data.count;
           badge.classList.remove("bump"); void badge.offsetWidth; badge.classList.add("bump");
-        }
-        var label = btn.textContent;
-        btn.textContent = "В корзине ✓";
-        setTimeout(function () { btn.textContent = label; btn.disabled = false; }, 1400);
+        });
+        buttons.forEach(function (btn) {
+          var label = btn.querySelector("[data-label]") || btn;
+          var text = label.textContent;
+          label.textContent = "В корзине ✓";
+          btn.classList.add("is-added");
+          setTimeout(function () { label.textContent = text; btn.classList.remove("is-added"); btn.disabled = false; }, 1400);
+        });
       }).catch(function () { form.submit(); });
     });
   });

@@ -23,3 +23,5 @@ site/.env.public
 deploy/windows/caddy.exe
 1c/tools/.pexels-key
 1c/tools/.pixabay-key
+1c/tools/.venv-images/
+1c/tools/.image-cache/

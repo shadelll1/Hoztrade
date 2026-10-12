@@ -86,14 +86,55 @@ def _page(request, qs):
 
 
 def home(request):
-    in_stock = _in_stock_first(Product.objects.published().filter(stock__gt=0, price_retail__gt=0))
+    in_stock = Product.objects.published().filter(stock__gt=0, price_retail__gt=0).select_related("category")
+    # Витрина главной — это картинки: товары с фото, по одному из группы, чтобы лента была разнообразной.
+    # Порядок — по «обороту» остатка (штука × цена): сверху типичные покупки, а не самая дешёвая мелочь.
+    with_photo = sorted(in_stock.exclude(thumb="")[:400], key=lambda p: (-p.stock * p.price_retail, p.name))
+    products = _one_per_group(with_photo, 12) or list(_in_stock_first(in_stock)[:12])
     return render(request, "catalog/home.html", {
-        "products": in_stock.select_related("category")[:8],
+        "products": products,
+        "hero_products": _hero_products(with_photo),
         "trucks": fleet(),
         "promos": Post.objects.active_promos()[:3],
         "posts": Post.objects.published().exclude(kind=Post.Kind.PROMO)[:3],
         "brands": _brands_with_products()[:12],
     })
+
+
+def _root_id(p):
+    return (p.category.parent_id or p.category_id) if p.category_id else None
+
+
+def _one_per_group(products, n):
+    """По одному товару из каждой группы, по кругу разделов: цемент, смеситель, ламинат, … вместо 12 мешков."""
+    by_root = {}
+    seen_groups = set()
+    for p in products:
+        if p.category_id not in seen_groups:
+            seen_groups.add(p.category_id)
+            by_root.setdefault(_root_id(p), []).append(p)
+    queues = list(by_root.values())
+    picked = []
+    while queues and len(picked) < n:
+        for q in list(queues):
+            picked.append(q.pop(0))
+            if not q:
+                queues.remove(q)
+            if len(picked) == n:
+                break
+    return picked
+
+
+def _hero_products(products, n=3):
+    """Товары для первого экрана: с фото, из разных разделов, самые «весомые» по цене."""
+    picked, roots = [], set()
+    for p in sorted(products, key=lambda p: -p.price_retail):
+        if _root_id(p) not in roots:
+            picked.append(p)
+            roots.add(_root_id(p))
+        if len(picked) == n:
+            break
+    return picked
 
 
 def _brands_with_products():
