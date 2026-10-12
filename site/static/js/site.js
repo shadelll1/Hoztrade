@@ -14,7 +14,16 @@
     toggles.forEach(function (t) {
       t.addEventListener("click", function () { setOpen(menu.hidden); });
     });
-    document.addEventListener("keydown", function (e) { if (e.key === "Escape") setOpen(false); });
+    // Escape закрывает меню; если фокус был внутри — возвращаем его на кнопку, которой меню открыли
+    document.addEventListener("keydown", function (e) {
+      if (e.key !== "Escape" || menu.hidden) return;
+      var inside = menu.contains(document.activeElement);
+      setOpen(false);
+      if (inside) {
+        var visible = Array.prototype.filter.call(toggles, function (t) { return t.offsetParent !== null; });
+        if (visible[0]) visible[0].focus();
+      }
+    });
     document.addEventListener("click", function (e) {
       if (menu.hidden || menu.contains(e.target)) return;
       for (var i = 0; i < toggles.length; i++) if (toggles[i].contains(e.target)) return;

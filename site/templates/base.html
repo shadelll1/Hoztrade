@@ -27,7 +27,7 @@
   <div class="wrap topbar__in">
     <span class="topbar__city">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 21s-7-6.2-7-11a7 7 0 0 1 14 0c0 4.8-7 11-7 11z"/><circle cx="12" cy="10" r="2.5"/></svg>
-      Чебоксары · 3 магазина
+      Чебоксары, 3 магазина
     </span>
     <nav class="topbar__nav" aria-label="Для покупателей">
       <a href="{% url 'content:promos' %}">Акции</a>
@@ -100,7 +100,7 @@
           <section class="mega__panel" data-mega-panel="{{ forloop.counter }}" {% if not forloop.first %}hidden{% endif %}>
             <header class="mega__head">
               <h2><a href="{{ root.get_absolute_url }}">{{ root.name }}</a></h2>
-              <a class="link" href="{{ root.get_absolute_url }}">Все товары раздела · {{ root.count }}</a>
+              <a class="link" href="{{ root.get_absolute_url }}">Все {{ root.count }} {{ root.count|plural:"товар,товара,товаров" }} раздела</a>
             </header>
             <div class="mega__grid">
               {% for child in root.children %}
@@ -153,7 +153,7 @@
           <path d="M13 19v10h14V19" fill="none" stroke="#fff" stroke-width="3" stroke-linejoin="round"/>
           <rect x="17.5" y="23" width="5" height="6" fill="var(--accent)"/>
         </svg>
-        <span class="logo__text"><b>Хозтрейд</b><small>стройматериалы · Чебоксары</small></span>
+        <span class="logo__text"><b>Хозтрейд</b><small>стройматериалы в Чебоксарах</small></span>
       </a>
       <p class="footer__lead">Более 10&nbsp;000 товаров для стройки, ремонта, дома и сада. Подберём материалы под ваш бюджет и привезём своим грузотакси.</p>
       <a class="footer__phone" href="tel:{{ site.phone_href }}">{{ site.phone }}</a>
@@ -161,23 +161,25 @@
       <button class="btn btn--light footer__call" type="button" data-dialog-open="callback">Заказать звонок</button>
     </div>
     <section>
-      <h3>Каталог</h3>
+      <h2 class="footer__title">Каталог</h2>
       <ul>{% for root in catalog_tree %}<li><a href="{{ root.get_absolute_url }}">{{ root.name }}</a></li>{% endfor %}</ul>
     </section>
     <section>
-      <h3>Покупателям</h3>
+      <h2 class="footer__title">Покупателям</h2>
       <ul>
         <li><a href="{% url 'pages:delivery' %}">Доставка грузотакси</a></li>
         <li><a href="{% url 'pages:payment' %}">Оплата</a></li>
         <li><a href="{% url 'orders:order_list' %}">Заказ по списку или смете</a></li>
         <li><a href="{% url 'pages:returns' %}">Возврат и обмен — 14 дней</a></li>
         <li><a href="{% url 'pages:b2b' %}">Корпоративным клиентам</a></li>
-        <li><a href="{% url 'content:promos' %}">Акции</a> · <a href="{% url 'content:news' %}">Новости</a> · <a href="{% url 'content:advice' %}">Советы</a></li>
-        <li><a href="{% url 'catalog:brands' %}">Бренды</a> · <a href="{% url 'pages:about' %}">О компании</a></li>
+        <li><a href="{% url 'content:promos' %}">Акции</a></li>
+        <li><a href="{% url 'content:news' %}">Новости</a> и <a href="{% url 'content:advice' %}">советы</a></li>
+        <li><a href="{% url 'catalog:brands' %}">Бренды</a></li>
+        <li><a href="{% url 'pages:about' %}">О компании</a></li>
       </ul>
     </section>
     <section id="stores">
-      <h3>Магазины в Чебоксарах</h3>
+      <h2 class="footer__title">Магазины в Чебоксарах</h2>
       <ul class="footer__stores">
         {% for store in site.stores %}<li><b>{{ store.title }}</b>{{ store.address }}</li>{% endfor %}
       </ul>
@@ -186,7 +188,7 @@
   <div class="wrap footer__bottom">
     <span>© 2018–2026 {{ site.legal_name }}</span>
     <span>Информация на сайте не является публичной офертой. Наличие и цены уточняйте у менеджеров.</span>
-    <span><a href="{% url 'pages:privacy' %}">Персональные данные</a> · <a href="{% url 'pages:cookies' %}">Cookie</a></span>
+    <span class="footer__legal"><a href="{% url 'pages:privacy' %}">Персональные данные</a><a href="{% url 'pages:cookies' %}">Cookie</a></span>
   </div>
 </footer>
 
@@ -218,6 +220,8 @@
   <p>Сайт использует только технические cookie — для корзины и входа в кабинет. <a href="{% url 'pages:cookies' %}">Подробнее</a></p>
   <button class="btn btn--primary" type="button" data-cookie-ok>Понятно</button>
 </div>
+
+<p class="sr-only" aria-live="polite" data-cart-live></p>
 
 <script src="{% static 'js/site.js' %}" defer></script>
 <script src="{% static 'js/orders.js' %}" defer></script>

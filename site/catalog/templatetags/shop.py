@@ -168,3 +168,34 @@ def stars(rating):
     except (TypeError, ValueError):
         full = 0
     return "★" * full + "☆" * (5 - full)
+
+
+# Силуэты машин автопарка (низ колёс — на y=48). Кузов, кабина, окно, рама и колёса красятся классами tk-*.
+_TRUCKS = {
+    "van": (104, '<rect class="tk-box" x="2" y="4" width="66" height="33" rx="2"/>'
+                 '<path class="tk-cab" d="M70 38V16h17l11 12v10z"/><path class="tk-win" d="M74 19h11l7 8H74z"/>'
+                 '<rect class="tk-dark" x="2" y="37" width="98" height="4" rx="1"/>', (18, 86)),
+    "box": (132, '<rect class="tk-box" x="2" y="2" width="90" height="35" rx="2"/>'
+                 '<path class="tk-cab" d="M95 38V12h20l14 14v12z"/><path class="tk-win" d="M99 15h14l10 10H99z"/>'
+                 '<rect class="tk-dark" x="2" y="37" width="126" height="4" rx="1"/>', (20, 36, 112)),
+    "semi": (214, '<rect class="tk-box" x="2" y="2" width="160" height="34" rx="2"/>'
+                  '<path class="tk-cab" d="M168 38V8h24l18 16v14z"/><path class="tk-win" d="M172 11h18l14 12h-32z"/>'
+                  '<rect class="tk-dark" x="2" y="36" width="208" height="4" rx="1"/>', (16, 30, 44, 180, 198)),
+}
+
+
+@register.simple_tag
+def truck_svg(capacity_t):
+    """Машина грузоподъёмностью capacity_t в масштабе: высота растёт как корень из тоннажа, форма — по классу."""
+    try:
+        t = float(capacity_t)
+    except (TypeError, ValueError):
+        t = 1.5
+    kind = "van" if t <= 3 else "box" if t < 15 else "semi"
+    width, body, wheels = _TRUCKS[kind]
+    height = round(24 + 13 * t ** 0.5)
+    wheel = "".join(f'<circle class="tk-dark" cx="{x}" cy="43" r="6"/><circle class="tk-hub" cx="{x}" cy="43" r="2.2"/>'
+                    for x in wheels)
+    return mark_safe(  # noqa: S308 — разметка своя, без пользовательских данных
+        f'<svg class="tk" viewBox="0 0 {width} 50" width="{round(width / 50 * height)}" height="{height}" '
+        f'aria-hidden="true" focusable="false">{body}{wheel}</svg>')

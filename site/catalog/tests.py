@@ -6,7 +6,7 @@ from django.core.management import call_command
 
 from catalog.demo_data import CATALOG
 from catalog.models import Category, Product
-from catalog.templatetags.shop import per_kg, plural, qty, rub, unit_count
+from catalog.templatetags.shop import per_kg, plural, qty, rub, truck_svg, unit_count
 
 
 @pytest.fixture
@@ -37,6 +37,27 @@ def test_per_kg_only_for_packed_goods():
     assert per_kg(Product(unit="шт", weight_kg=Decimal("3.6"), price_retail=Decimal("21"))) == ""
     assert per_kg(Product(unit="упак", weight_kg=Decimal("17.5"), price_retail=Decimal("1390"))) == ""   # ламинат
     assert per_kg(Product(unit="мешок", weight_kg=Decimal("0"), price_retail=Decimal("100"))) == ""
+
+
+def _svg_height(svg):
+    return int(str(svg).split('height="')[1].split('"')[0])
+
+
+def test_truck_svg_scales_with_capacity():
+    small, big = truck_svg("1.5"), truck_svg("20")
+    assert _svg_height(small) < _svg_height(big)
+    assert 'viewBox="0 0 104 50"' in small and 'viewBox="0 0 214 50"' in big   # фургон и фура
+    assert 'aria-hidden="true"' in big
+
+
+def test_home_fleet_and_popular_queries(client, demo):
+    r = client.get("/")
+    trucks = r.context["trucks"]
+    assert [t.capacity_t for t in trucks] == sorted(t.capacity_t for t in trucks)
+    assert all(t.min_price for t in trucks)          # у каждой машины есть цена рейса
+    html = r.content.decode()
+    assert "fleet-line__trucks" in html and f"от {rub(trucks[0].min_price)}" in html
+    assert "/search/?q=%D0%A6%D0%B5%D0%BC%D0%B5%D0%BD%D1%82" in html   # «Цемент»
 
 
 @pytest.mark.django_db

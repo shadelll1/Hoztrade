@@ -1,7 +1,6 @@
-<article class="post-card post-card--{{ post.kind }}">
-  <a class="post-card__img" href="{{ post.get_absolute_url }}" tabindex="-1" aria-hidden="true">
-    {% if post.image %}<img src="{{ post.image.url }}" alt="" loading="lazy">{% else %}<span class="post-card__ph">{% if post.kind == 'promo' %}%{% elif post.kind == 'advice' %}?{% else %}i{% endif %}</span>{% endif %}
-  </a>
+{# Без картинки — без заглушки: карточка короче, акция выделена фоном #}
+<article class="post-card post-card--{{ post.kind }}{% if not post.image %} post-card--text{% endif %}">
+  {% if post.image %}<a class="post-card__img" href="{{ post.get_absolute_url }}" tabindex="-1" aria-hidden="true"><img src="{{ post.image.url }}" alt="" loading="lazy"></a>{% endif %}
   <div class="post-card__body">
     <span class="tag tag--{{ post.kind }}">{{ post.get_kind_display }}</span>
     <a class="post-card__title" href="{{ post.get_absolute_url }}">{{ post.title }}</a>

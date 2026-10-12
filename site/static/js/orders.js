@@ -14,6 +14,7 @@
   // «В корзину» без перезагрузки: обновляем значки (шапка и нижняя панель) и кнопки формы.
   // Кнопка может стоять вне формы (панель на телефоне, атрибут form) — берём все кнопки отправки формы.
   var badges = document.querySelectorAll("[data-cart-count]");
+  var live = document.querySelector("[data-cart-live]");  // озвучка для экранного диктора
   document.querySelectorAll("[data-add-to-cart]").forEach(function (form) {
     form.addEventListener("submit", function (e) {
       e.preventDefault();
@@ -26,6 +27,7 @@
           badge.hidden = !data.count;
           badge.classList.remove("bump"); void badge.offsetWidth; badge.classList.add("bump");
         });
+        if (live) live.textContent = "Товар добавлен в корзину. Товаров в корзине: " + data.count;
         buttons.forEach(function (btn) {
           var label = btn.querySelector("[data-label]") || btn;
           var text = label.textContent;

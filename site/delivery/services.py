@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from decimal import Decimal
 
 from django.db import transaction
+from django.db.models import Min, Q
 
 from .models import Tariff, Truck, Zone
 
@@ -49,6 +50,13 @@ def pick_truck(trucks, weight_kg, volume_m3):
 def fleet():
     """Машины в работе по возрастанию грузоподъёмности."""
     return list(Truck.objects.filter(is_active=True).order_by("capacity_t", "name"))
+
+
+def fleet_with_prices():
+    """Машины в работе с самым дешёвым рейсом (min_price) по действующим зонам — для витрины автопарка."""
+    in_zone = Q(tariffs__zone__is_active=True)
+    return list(Truck.objects.filter(is_active=True)
+                .annotate(min_price=Min("tariffs__price", filter=in_zone)).order_by("capacity_t", "name"))
 
 
 def zones():

@@ -7,7 +7,7 @@ from django.shortcuts import get_object_or_404, render
 
 from content.forms import ReviewForm
 from content.models import Post, Review
-from delivery.services import fleet
+from delivery.services import fleet, fleet_with_prices
 
 from .models import Brand, Category, Product
 from .tree import cached_tree, find_node
@@ -85,6 +85,11 @@ def _page(request, qs):
     return Paginator(qs, PER_PAGE).get_page(request.GET.get("page"))
 
 
+# Подсказки поиска на первом экране: самые частые запросы покупателей стройматериалов
+POPULAR_QUERIES = ("Цемент", "Кирпич", "Профнастил", "Металлочерепица", "Поликарбонат", "Ламинат", "Плиточный клей",
+                   "Смеситель")
+
+
 def home(request):
     in_stock = Product.objects.published().filter(stock__gt=0, price_retail__gt=0).select_related("category")
     # Витрина главной — это картинки: товары с фото, по одному из группы, чтобы лента была разнообразной.
@@ -93,8 +98,8 @@ def home(request):
     products = _one_per_group(with_photo, 12) or list(_in_stock_first(in_stock)[:12])
     return render(request, "catalog/home.html", {
         "products": products,
-        "hero_products": _hero_products(with_photo),
-        "trucks": fleet(),
+        "trucks": fleet_with_prices(),
+        "popular_queries": POPULAR_QUERIES,
         "promos": Post.objects.active_promos()[:3],
         "posts": Post.objects.published().exclude(kind=Post.Kind.PROMO)[:3],
         "brands": _brands_with_products()[:12],
@@ -122,18 +127,6 @@ def _one_per_group(products, n):
                 queues.remove(q)
             if len(picked) == n:
                 break
-    return picked
-
-
-def _hero_products(products, n=3):
-    """Товары для первого экрана: с фото, из разных разделов, самые «весомые» по цене."""
-    picked, roots = [], set()
-    for p in sorted(products, key=lambda p: -p.price_retail):
-        if _root_id(p) not in roots:
-            picked.append(p)
-            roots.add(_root_id(p))
-        if len(picked) == n:
-            break
     return picked
 
 

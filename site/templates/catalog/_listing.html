@@ -1,7 +1,7 @@
 {% load shop %}
 <div class="listing">
   <details class="filters" {% if filters.active %}open{% endif %} data-filters>
-    <summary><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 6h16M7 12h10M10 18h4"/></svg> Фильтры{% if filters.active %} · включены{% endif %}</summary>
+    <summary><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 6h16M7 12h10M10 18h4"/></svg> Фильтры{% if filters.active %} (включены){% endif %}</summary>
     <form method="get" class="filters__form">
       {% if query %}<input type="hidden" name="q" value="{{ query }}">{% endif %}
       <input type="hidden" name="sort" value="{{ filters.sort }}">
@@ -42,9 +42,9 @@
       </div>
       {% if page.has_other_pages %}
         <nav class="pager" aria-label="Страницы">
-          {% if page.has_previous %}<a class="btn btn--ghost" href="{% url_with page=page.previous_page_number %}">← Назад</a>{% endif %}
+          {% if page.has_previous %}<a class="btn btn--ghost" href="{% url_with page=page.previous_page_number %}">Назад</a>{% endif %}
           <span class="muted">Страница {{ page.number }} из {{ page.paginator.num_pages }}</span>
-          {% if page.has_next %}<a class="btn btn--ghost" href="{% url_with page=page.next_page_number %}">Дальше →</a>{% endif %}
+          {% if page.has_next %}<a class="btn btn--ghost" href="{% url_with page=page.next_page_number %}">Дальше</a>{% endif %}
         </nav>
       {% endif %}
     {% else %}

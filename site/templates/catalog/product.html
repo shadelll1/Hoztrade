@@ -39,7 +39,7 @@
       <h1>{{ product.title }}</h1>
       <p class="muted pdp__meta">
         {% if product.sku %}<span>Артикул: {{ product.sku }}</span>{% endif %}
-        {% if rating.count %}<a class="rating-link" href="#reviews"><span class="stars" aria-hidden="true">{% stars rating.rating %}</span> {{ rating.rating|stringformat:'.1f' }} · {{ rating.count }} {{ rating.count|plural:"отзыв,отзыва,отзывов" }}</a>
+        {% if rating.count %}<a class="rating-link" href="#reviews"><span class="stars" aria-hidden="true">{% stars rating.rating %}</span> {{ rating.rating|stringformat:'.1f' }} ({{ rating.count }} {{ rating.count|plural:"отзыв,отзыва,отзывов" }})</a>
         {% else %}<a class="rating-link" href="#reviews">Нет отзывов</a>{% endif %}
       </p>
 
@@ -79,11 +79,11 @@
         <ul class="buybox__ways">
           <li>
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M2 6h12v10H2zM14 10h4l4 3v3h-8z"/><circle cx="6" cy="18" r="2"/><circle cx="18" cy="18" r="2"/></svg>
-            <span><b>Доставка грузотакси</b><small>Машину подберём по весу заказа · <a class="link" href="{% url 'pages:delivery' %}">тарифы</a></small></span>
+            <span><b>Доставка грузотакси</b><small>Машину подберём по весу заказа, <a class="link" href="{% url 'pages:delivery' %}">тарифы по зонам</a></small></span>
           </li>
           <li>
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M3 10 12 4l9 6v10H3z"/><path d="M9 20v-6h6v6"/></svg>
-            <span><b>Самовывоз — бесплатно</b><small>Из магазинов в Чебоксарах · <a class="link" href="{% url 'pages:contacts' %}">адреса</a></small></span>
+            <span><b>Самовывоз — бесплатно</b><small>Из трёх магазинов в Чебоксарах, <a class="link" href="{% url 'pages:contacts' %}">адреса</a></small></span>
           </li>
           <li>
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg>
